@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from fastapi import Body, FastAPI
 
 
@@ -61,4 +62,6 @@ def delete_expense(expense_id: str):
             list_of_expenses.pop(i)
             break
 
+=======
+>>>>>>> origin/main
 
