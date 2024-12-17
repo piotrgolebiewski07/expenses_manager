@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 from fastapi import Body, FastAPI
 
-
 app = FastAPI()
-
 
 list_of_expenses = [
     {"id": "1", "expense": "milk", "category": "food", "price": 10},
@@ -61,7 +58,3 @@ def delete_expense(expense_id: str):
         if list_of_expenses[i].get("id") == expense_id:
             list_of_expenses.pop(i)
             break
-
-=======
->>>>>>> origin/main
-
