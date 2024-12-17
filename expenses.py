@@ -6,7 +6,7 @@ list_of_expenses = [
     {"id": "1", "expense": "milk", "category": "food", "price": 10},
     {"id": "2", "expense": "bread", "category": "food", "price": 5},
     {"id": "3", "expense": "water", "category": "fees", "price": 150},
-    {"id": "4", "expense": "phone", "category": "fees", "price": 20}
+    {"id": "4", "expense": "phone", "category": "fees", "price": 2000}
     ]
 
 
