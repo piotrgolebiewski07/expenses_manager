@@ -20,6 +20,10 @@ class ExpenseDTO(BaseModel):
     price: int
     datetime: datetime.datetime
 
+    class Config:
+        from_attributes = True
+
+
 
 class Expense:
 
@@ -40,8 +44,9 @@ EXPENSES = [
 ]
 
 
-@app.get("/expenses/")
-def read_expense_endpoint():
+
+@app.get("/expenses/", response_model=list[ExpenseDTO])
+def read_expenses_endpoint():
     return EXPENSES
 
 
