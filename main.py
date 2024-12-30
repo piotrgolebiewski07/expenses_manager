@@ -20,9 +20,6 @@ class ExpenseDTO(BaseModel):
     price: int
     datetime: datetime.datetime
 
-    class Config:
-        from_attributes = True
-
 
 class Expense:
 
@@ -43,23 +40,18 @@ EXPENSES = [
 ]
 
 
-@app.get("/expenses/", response_model=list[ExpenseDTO])
+@app.get("/expenses/")
 def read_expense_endpoint():
     return EXPENSES
 
-@app.post("/expenses/", response_model=ExpenseDTO)
-def create_expense_endpoint(dto: ExpenseCreateDTO):
-    print(dto)
+@app.post("/expenses/")
+def create_expense_endpoint(expense_request: ExpenseCreateDTO):
 
-    # mock dodawanie do bazy danych
     expense = Expense(
         id=len(EXPENSES) + 1,
-        expense=dto.name,
-        category=dto.category,
-        price=dto.price
+        expense=expense_request.name,
+        category=expense_request.category,
+        price=expense_request.price
     )
-    EXPENSES.append(expense)
 
-    # output
-    dto = ExpenseDTO.from_orm(expense)
-    return dto
+    EXPENSES.append(expense)
