@@ -44,6 +44,7 @@ EXPENSES = [
 def read_expense_endpoint():
     return EXPENSES
 
+
 @app.post("/expenses/")
 def create_expense_endpoint(expense_request: ExpenseCreateDTO):
 
@@ -55,3 +56,18 @@ def create_expense_endpoint(expense_request: ExpenseCreateDTO):
     )
 
     EXPENSES.append(expense)
+
+
+@app.put("/expenses/{id}")
+def update_expense(expense: ExpenseDTO):
+    for i in range(len(EXPENSES)):
+        if EXPENSES[i].id == expense.id:
+            EXPENSES[i] = expense
+
+
+@app.delete("/expenses/{id}")
+def delete_expense(id: int):
+    for i in range(len(EXPENSES)):
+        if EXPENSES[i].id == id:
+            del EXPENSES[i]
+            break
