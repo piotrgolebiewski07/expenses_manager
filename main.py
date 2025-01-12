@@ -1,8 +1,8 @@
 import datetime
 
 from pydantic import BaseModel
-from fastapi import FastAPI
-
+from fastapi import FastAPI, HTTPException
+from fastapi import status
 
 app = FastAPI()
 
@@ -11,6 +11,12 @@ class ExpenseCreateDTO(BaseModel):
     name: str
     category: str
     price: int
+    
+
+class ExpenseUpdateDTO(BaseModel):
+    name: str | None = None
+    category: str | None = None 
+    price: int | None = None 
 
 
 class ExpenseDTO(BaseModel):
@@ -47,31 +53,61 @@ EXPENSES = [
 
 @app.get("/expenses/", response_model=list[ExpenseDTO])
 def read_expenses_endpoint():
-    return EXPENSES
+
+    # business logic here
+    expenses = EXPENSES
+
+    return expenses
 
 
 @app.post("/expenses/")
-def create_expense_endpoint(expense_request: ExpenseCreateDTO):
+def create_expense_endpoint(dto: ExpenseCreateDTO):
 
+    # business logic here
     expense = Expense(
         id=len(EXPENSES) + 1,
-        expense=expense_request.name,
-        category=expense_request.category,
-        price=expense_request.price
+        expense=dto.name,
+        category=dto.category,
+        price=dto.price
     )
-
     EXPENSES.append(expense)
 
+    return expense
 
-@app.put("/expenses/{id}")
-def update_expense(expense: ExpenseDTO):
+
+@app.put("/expenses/{id}", response_model=ExpenseDTO)
+def update_expense(id: int, dto: ExpenseUpdateDTO):
+
+    # validation
+    if not any(expense.id == id for expense in EXPENSES):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Item not found"
+        )
+
+    # business logic here
     for i in range(len(EXPENSES)):
-        if EXPENSES[i].id == expense.id:
+        if EXPENSES[i].id == id:
+
+            expense = EXPENSES[i]
+
+            if dto.name:
+                expense.name = dto.name
+            if dto.category:
+                expense.category = dto.category
+            if dto.price:
+                expense.price = dto.price
+
             EXPENSES[i] = expense
+            
+            return expense
+
 
 
 @app.delete("/expenses/{id}")
 def delete_expense(id: int):
+
+    # business logic here
     for i in range(len(EXPENSES)):
         if EXPENSES[i].id == id:
             del EXPENSES[i]
