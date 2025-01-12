@@ -24,7 +24,7 @@ class ExpenseDTO(BaseModel):
     name: str
     category: str
     price: int
-    datetime: datetime.datetime
+    created_at: datetime.datetime
 
     class Config:
         from_attributes = True
@@ -38,7 +38,7 @@ class Expense:
         self.name = expense
         self.category = category
         self.price = price
-        self.datetime = datetime.datetime.now()
+        self.created_at = datetime.datetime.now()
 
 
 EXPENSES = [
