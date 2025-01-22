@@ -1,22 +1,51 @@
-import datetime
-
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from datetime import datetime
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from fastapi import status
+from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError
 
 app = FastAPI()
+
+# Tworzenie silnika bazy danych (w tym przypadku SQLite)
+DATABASE_URL = "sqlite:///new.sqlite"
+engine = create_engine(DATABASE_URL, echo=True)
+
+# Tworzenie klasy bazowej dla modeli
+Base = declarative_base()
+
+# Konfiguracja sesji
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Model SQLAlchemy
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    price = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)  # automatycznie ustawia czas dodania
+
+
+# Tworzenie tabel w bazie danych
+Base.metadata.create_all(engine)
 
 
 class ExpenseCreateDTO(BaseModel):
     name: str
     category: str
     price: int
-    
+
 
 class ExpenseUpdateDTO(BaseModel):
     name: str | None = None
-    category: str | None = None 
-    price: int | None = None 
+    category: str | None = None
+    price: int | None = None
 
 
 class ExpenseDTO(BaseModel):
@@ -24,91 +53,70 @@ class ExpenseDTO(BaseModel):
     name: str
     category: str
     price: int
-    created_at: datetime.datetime
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-
-class Expense:
-
-    def __init__(self, id: int, expense: str, category: str, price: int):
-        self.id = id
-        self.name = expense
-        self.category = category
-        self.price = price
-        self.created_at = datetime.datetime.now()
-
-
-EXPENSES = [
-    Expense(1, "vegetables", "food", 40),
-    Expense(2, "fruit", "food", 30),
-    Expense(3, "phone", "fees", 70),
-    Expense(4, "internet", "food", 200),
-    Expense(5, "clothes", "shopping", 500)
-]
+# Endopint post - creating a new expense
+@app.post("/create-expenses/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
+def create_expense_endpoint(dto: ExpenseCreateDTO):
+    try:
+        new_expense = Expense(name=dto.name, category=dto.category, price=dto.price)
+        session.add(new_expense)
+        session.commit()  # Zatwierdzenie zmian w bazie danych
+        session.refresh(new_expense)  # Pobiera świeżo utworzonego obiektu
+        return new_expense
+    except SQLAlchemyError:
+        session.rollback()  # Cofnięcie zmian w razie błędu
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-
-@app.get("/expenses/", response_model=list[ExpenseDTO])
-def read_expenses_endpoint():
-
-    # business logic here
-    expenses = EXPENSES
-
+# Endpoint GET - collecting all expenses
+@app.get("/expenses/", response_model=List[ExpenseDTO])
+def read_all_expenses_endpoint():
+    expenses = session.query(Expense).all()
     return expenses
 
 
-@app.post("/expenses/")
-def create_expense_endpoint(dto: ExpenseCreateDTO):
-
-    # business logic here
-    expense = Expense(
-        id=len(EXPENSES) + 1,
-        expense=dto.name,
-        category=dto.category,
-        price=dto.price
-    )
-    EXPENSES.append(expense)
-
+# Endpoint GET - collecting an expense by ID
+@app.get("/expenses/{expense_id}", response_model=ExpenseDTO)
+def read_expenses_by_id_endpoint(expense_id: int):
+    expense = session.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
     return expense
 
 
-@app.put("/expenses/{id}", response_model=ExpenseDTO)
-def update_expense(id: int, dto: ExpenseUpdateDTO):
+# Endpoint put - expense update
+@app.put("/expenses/{expense_id}", response_model=ExpenseDTO)
+def update_expenses(expense_id: int, dto: ExpenseUpdateDTO):
+    expense = session.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
 
-    # validation
-    if not any(expense.id == id for expense in EXPENSES):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Item not found"
-        )
+    # Update only the specified fields
+    if dto.name is not None:
+        expense.name = dto.name
+    if dto.category is not None:
+        expense.category = dto.category
+    if dto.price is not None:
+        expense.price = dto.price
 
-    # business logic here
-    for i in range(len(EXPENSES)):
-        if EXPENSES[i].id == id:
-
-            expense = EXPENSES[i]
-
-            if dto.name:
-                expense.name = dto.name
-            if dto.category:
-                expense.category = dto.category
-            if dto.price:
-                expense.price = dto.price
-
-            EXPENSES[i] = expense
-            
-            return expense
+    session.commit()
+    session.refresh(expense)
+    return expense
 
 
-
-@app.delete("/expenses/{id}")
-def delete_expense(id: int):
+# Endpoint Delete - removing an expense
+@app.delete("/expenses/{expense_id}")
+def delete_expense(expense_id: int):
 
     # business logic here
-    for i in range(len(EXPENSES)):
-        if EXPENSES[i].id == id:
-            del EXPENSES[i]
-            break
+    expense = session.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    session.delete(expense)
+    session.commit()
+    return None
