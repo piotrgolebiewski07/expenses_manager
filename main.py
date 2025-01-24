@@ -1,12 +1,11 @@
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
-from datetime import datetime
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from fastapi import FastAPI, HTTPException, Query
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+from sqlalchemy.orm import sessionmaker, declarative_base
 from fastapi import status
-from typing import List, Optional
+from typing import List
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
 
 app = FastAPI()
 
@@ -21,6 +20,7 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 session = Session()
 
+
 # Model SQLAlchemy
 class Expense(Base):
     __tablename__ = "expenses"
@@ -29,7 +29,7 @@ class Expense(Base):
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     price = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)  # automatycznie ustawia czas dodania
+    created_at = Column(DateTime, default=func.now(), nullable=False)  # automatycznie ustawia czas dodania
 
 
 # Tworzenie tabel w bazie danych
@@ -68,7 +68,7 @@ def create_expense_endpoint(dto: ExpenseCreateDTO):
         session.commit()  # Zatwierdzenie zmian w bazie danych
         session.refresh(new_expense)  # Pobiera świeżo utworzonego obiektu
         return new_expense
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         session.rollback()  # Cofnięcie zmian w razie błędu
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -120,3 +120,31 @@ def delete_expense(expense_id: int):
     session.delete(expense)
     session.commit()
     return None
+
+
+# Endpoint - statistics
+@app.get("/expenses/statistics/{month}")
+def get_statistics(month: int):
+    try:
+        query = session.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}")
+        expenses = query.all()
+
+        # Obliczanie sumy wydatków
+        total = sum(expense.price for expense in expenses)
+
+        # Obliczanie średniej wydatków
+        average = session.query(func.avg(Expense.price)).filter(func.strftime("%m", Expense.created_at) == f"{month:02}"
+                                                                ).scalar()
+        average = average or 0
+
+        # Najwyższy jednorazowy wydatek
+        max_expense = session.query(func.max(Expense.price)).filter(func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+
+        return {
+            "total expenses in a month": total,
+            "average expenses in month": round(average, 2),
+            "max expense in month": max_expense
+        }
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Error calculating statistics: {str(e)}")
