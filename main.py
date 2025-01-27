@@ -3,9 +3,13 @@ from fastapi import FastAPI, HTTPException, Query
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
 from sqlalchemy.orm import sessionmaker, declarative_base
 from fastapi import status
-from typing import List
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
+from fastapi.responses import FileResponse
+
+import matplotlib.pyplot as plt
+import os
+import tempfile
 
 app = FastAPI()
 
@@ -60,13 +64,13 @@ class ExpenseDTO(BaseModel):
 
 
 # Endopint post - creating a new expense
-@app.post("/create-expenses/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
+@app.post("/expenses/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
 def create_expense_endpoint(dto: ExpenseCreateDTO):
     try:
         new_expense = Expense(name=dto.name, category=dto.category, price=dto.price)
         session.add(new_expense)
         session.commit()  # Zatwierdzenie zmian w bazie danych
-        session.refresh(new_expense)  # Pobiera świeżo utworzonego obiektu
+        #session.refresh(new_expense)  # Pobieranie świeżo utworzonego obiektu
         return new_expense
     except SQLAlchemyError as e:
         session.rollback()  # Cofnięcie zmian w razie błędu
@@ -74,7 +78,7 @@ def create_expense_endpoint(dto: ExpenseCreateDTO):
 
 
 # Endpoint GET - collecting all expenses
-@app.get("/expenses/", response_model=List[ExpenseDTO])
+@app.get("/expenses/", response_model=list[ExpenseDTO])
 def read_all_expenses_endpoint():
     expenses = session.query(Expense).all()
     return expenses
@@ -91,7 +95,7 @@ def read_expenses_by_id_endpoint(expense_id: int):
 
 # Endpoint put - expense update
 @app.put("/expenses/{expense_id}", response_model=ExpenseDTO)
-def update_expenses(expense_id: int, dto: ExpenseUpdateDTO):
+def update_expenses_endpoint(expense_id: int, dto: ExpenseUpdateDTO):
     expense = session.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -111,7 +115,7 @@ def update_expenses(expense_id: int, dto: ExpenseUpdateDTO):
 
 # Endpoint Delete - removing an expense
 @app.delete("/expenses/{expense_id}")
-def delete_expense(expense_id: int):
+def delete_expense_endpoint(expense_id: int):
 
     # business logic here
     expense = session.query(Expense).filter(Expense.id == expense_id).first()
@@ -119,7 +123,7 @@ def delete_expense(expense_id: int):
         raise HTTPException(status_code=404, detail="Expense not found")
     session.delete(expense)
     session.commit()
-    return None
+    return
 
 
 # Endpoint - statistics
@@ -148,3 +152,49 @@ def get_statistics(month: int):
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Error calculating statistics: {str(e)}")
+
+# Endpoint - visualization
+@app.get("/expenses/visualization/{month}")
+def get_visualization(month: int):
+    try:
+        # Pobieranie danych dla danego miesiąca
+        query = session.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}")
+        expenses = query.all()
+
+        # Jeśi nie ma wydatków w danym miesiącu zwraca błąd
+        if not expenses:
+            raise HTTPException(status_code=404, detail="No expenses found for this month.")
+
+        # Grupowanie wydatków według kategorii
+        categories = {}
+        for expense in expenses:
+            if expense.category in categories:
+                categories[expense.category] += expense.price
+            else:
+                categories[expense.category] = expense.price
+
+        # Przygotowanie danych do wykresu
+        labels = list(categories.keys())
+        values = list(categories.values())
+
+        # Tworzenie wykresu kołowego
+        plt.figure(figsize=(6,6))
+        plt.pie(values, labels=labels, autopct="%1.1f%%", startangle=90, colors=['#ff9999','#66b3ff'])
+        plt.title(f"Wydatki w miesiącu {month:02}")
+
+        # Zapisanie wykresu do pliku tymczasowego
+        output_file = os.path.join(tempfile.gettempdir(), "expenses_pie_chart.png")
+        plt.savefig(output_file)
+        plt.close()     # Zamknięcie wykreu, aby zwolnić pamięć
+
+        # Zwracanie pliku jako odpowiedź
+        return FileResponse(output_file, media_type="image/png", filename=f"expenses_month_{month:02}.png")
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Error generating visualization {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+    finally:
+        # Usunięcie pliku po wysłaniu go jako odpowiedź
+        if os.path.exists("expenses_pie_chart.png"):
+            os.remove("expenses_pie_chart.png")
