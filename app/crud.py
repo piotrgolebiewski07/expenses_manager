@@ -1,11 +1,13 @@
 from sqlalchemy import func
-from sqlalchemy.orm import Session, session
+from sqlalchemy.orm import Session
 from .models import Expense
 from .schemas import ExpenseCreateDTO, ExpenseUpdateDTO
+from typing import List
 
 
-def get_all_expenses(db: Session):
-    return db.query(Expense).all()
+def get_all_expenses(db: Session) -> list[Expense]:
+    expenses: List[Expense] = db.query(Expense).all()
+    return expenses
 
 
 def get_expense_by_id(db: Session, expense_id: int):
@@ -16,7 +18,6 @@ def create_expense(db: Session, dto: ExpenseCreateDTO):
     expense = Expense(name=dto.name, category=dto.category, price=dto.price)
     db.add(expense)
     db.commit()     # Zatwierdzenie zmian w bazie danych
-    db.refresh(expense)     # Pobieranie świeżo utworzonego obiektu
     return expense
 
 
@@ -31,16 +32,12 @@ def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
     if dto.price is not None:
         expense.price = dto.price
     db.commit()
-    db.refresh(expense)
     return expense
 
 
 def delete_expense(db: Session, expense_id: int):
-    expense = get_expense_by_id(db, expense_id)
-    if expense:
-        db.delete(expense)
-        db.commit()
-    return expense
+    db.query(Expense).filter(Expense.id == expense_id).delete()
+    db.commit()
 
 
 def statistics(db: Session, month: int):

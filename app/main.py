@@ -51,8 +51,6 @@ def update_expenses_endpoint(expense_id: int, dto: ExpenseUpdateDTO, db: Session
 @app.delete("/expenses/{expense_id}")
 def delete_expense_endpoint(expense_id: int, db: Session = Depends(get_session)):
     expense = delete_expense(db, expense_id)
-    if not expense:
-        raise_not_found()
     return {"message": f"Expense with ID {expense_id} deleted"}
 
 
