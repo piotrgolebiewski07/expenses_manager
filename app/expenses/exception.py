@@ -15,3 +15,8 @@ def raise_server_error():
 
 def raise_calculating_statistics():
     raise HTTPException(status_code=500, detail="Error calculating statistics")
+
+
+def raise_generating_visualization():
+    raise HTTPException(status_code=500, detail="Error generating visualization")
+

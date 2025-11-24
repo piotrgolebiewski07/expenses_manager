@@ -1,13 +1,14 @@
+import io
+import matplotlib.pyplot as plt
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from .models import Expense
-from .schemas import ExpenseCreateDTO, ExpenseUpdateDTO
-from typing import List
+from app.expenses.models import Expense
+from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
 
 
 def get_all_expenses(db: Session) -> list[Expense]:
-    expenses: List[Expense] = db.query(Expense).all()
-    return expenses
+    expense: list[Expense] = db.query(Expense).all()
+    return expense
 
 
 def get_expense_by_id(db: Session, expense_id: int):
@@ -36,13 +37,18 @@ def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
 
 
 def delete_expense(db: Session, expense_id: int):
-    db.query(Expense).filter(Expense.id == expense_id).delete()
+    expense = get_expense_by_id(db, expense_id)
+    if not expense:
+        return None
+    db.delete(expense)
     db.commit()
+    return expense
 
 
 def statistics(db: Session, month: int):
     # Obliczanie sumy wydatków
-    total = db.query(func.sum(Expense.price)).filter(func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+    total = db.query(func.sum(Expense.price)).filter(
+        func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
 
     # Obliczanie średniej wydatków
     average = db.query(func.avg(Expense.price)).filter(
@@ -57,3 +63,34 @@ def statistics(db: Session, month: int):
         "average expenses in month": round(average, 2),
         "max expense in month": max_expense
     }
+
+
+def generate_visualization(db, month):
+    # Pobranie danych
+    expenses = db.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}").all()
+
+    # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
+    if not expenses:
+        raise ValueError("Not expenses found for this month")
+
+    # Grupowanie wydatków według kategorii
+    categories = {}
+    for expense in expenses:
+        categories[expense.category] = categories.get(expense.category, 0) + expense.price
+
+
+    # Przygotowanie danych do wykresu
+    labels = list(categories.keys())
+    values = list(categories.values())
+
+    # Tworzenie wykresu kołowego
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+
+    # Zapisanie wykresu do pamięci
+    image_stream = io.BytesIO()
+    fig.savefig(image_stream, format="png")   # Zapis do obiektu Bytes IO
+    plt.close(fig)
+    image_stream.seek(0)
+
+    return image_stream

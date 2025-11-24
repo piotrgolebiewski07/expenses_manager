@@ -12,3 +12,4 @@ typing_extensions==4.12.2
 uvicorn==0.34.0
 
 SQLAlchemy~=2.0.37
+matplotlib~=3.10.0

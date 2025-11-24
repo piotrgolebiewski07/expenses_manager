@@ -178,8 +178,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-#Ignorowanie wszystkich plików SQLite
-*.sqlite
-*.sqlite3
-*.db

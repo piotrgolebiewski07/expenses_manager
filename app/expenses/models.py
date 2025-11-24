@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
 from sqlalchemy.orm import declarative_base
 
+
 # Klasa bazowa dla SQLAlchemy
 Base = declarative_base()
 
@@ -14,3 +15,4 @@ class Expense(Base):
     category = Column(String, nullable=False)
     price = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)  # automatycznie ustawia czas dodania
+
