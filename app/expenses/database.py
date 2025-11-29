@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.expenses.models import Base
 
 
 DATABASE_URL = "sqlite:///new.sqlite"
@@ -18,11 +17,7 @@ Session = sessionmaker(bind=engine)
 def get_session():
     db = Session()
     try:
-        return db
+        yield db
     finally:
         db.close()
-
-
-# Tworzenie tabel w bazie danych
-Base.metadata.create_all(bind=engine)
 
