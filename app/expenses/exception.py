@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 
 def raise_not_found():
-    raise HTTPException(status_code=404, detail="Expense not found")
+    raise HTTPException(status_code=404, detail="No expenses found")
 
 
 def raise_bad_request():

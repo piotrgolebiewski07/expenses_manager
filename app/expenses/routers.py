@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import date
 
 from app.expenses.database import get_session
 from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, ExpenseDTO
@@ -12,7 +14,9 @@ from app.expenses.crud import (
     update_expense,
     delete_expense,
     statistics,
-    generate_visualization
+    generate_visualization,
+    generate_report
+
 )
 from app.expenses.exception import (
     raise_not_found,
@@ -89,60 +93,27 @@ def get_visualization_endpoint(month: int, db: Session = Depends(get_session)):
         raise_server_error()
 
 
-'''
 # Endpoint - report
-@app.get("/export/", summary="Generate a CSV report for expenses")
+@router.get("/export/", summary="Generate a CSV report for expenses")
 def generate_report_endpoint(
-    category: Optional[str] = Query(None, description="Filter by category"),
-    start_date: Optional[str] = Query(None, description="Filter by start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="Filter by end date (YYYY-MM-DD)"),
+    category: Optional[str] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_session)
 ):
     try:
-        # Budowanie zapytania do bazy danych z filtrami
-        query = session.query(Expense)
-
-        if category:
-            query = query.filter(Expense.category == category)
-        if start_date:
-            try:
-                start_date_parsed = datetime.strptime(start_date, "%Y-%m-%d")
-                query = query.filter(Expense.created_at >= start_date_parsed)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD.")
-        if end_date:
-            try:
-                end_date_parsed = datetime.strptime(end_date, "%Y-%m-%d")
-                query = query.filter(Expense.created_at <= end_date_parsed)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD.")
-
-        expenses = query.all()
-
-        if not expenses:
-            raise HTTPException(status_code=404, detail="No expenses found for the given criteria.")
-
-        # Tworzenie pliku CSV w katalogu tymczasowym
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".csv") as tmpfile:
-            writer = csv.writer(tmpfile)
-            # Nagłówki kolumn
-            writer.writerow(["ID", "Name", "Category", "Price", "Created At"])
-
-            # Wiersze z danymi
-            for expense in expenses:
-                writer.writerow([expense.id, expense.name, expense.category, expense.price, expense.created_at])
-
-            tmpfile_path = tmpfile.name
-
-        # Zwracanie pliku jako odpowiedź
-        return FileResponse(
-            tmpfile_path,
+        csv_stream = generate_report(db, category, start_date, end_date)
+        return StreamingResponse(
+            csv_stream,
             media_type="text/csv",
-            filename="expenses_report.csv"
+            headers={"Content-Disposition": 'attachment; filename="expenses_report.csv"'}
         )
-
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-'''
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except SQLAlchemyError:
+        raise_server_error()
+    except HTTPException:
+        raise
+    except Exception:
+        raise_server_error()
 
