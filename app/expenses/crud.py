@@ -1,7 +1,13 @@
+import csv
 import io
+from datetime import date
+
 import matplotlib.pyplot as plt
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
+from app.expenses.exception import raise_not_found
 from app.expenses.models import Expense
 from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
 
@@ -59,9 +65,9 @@ def statistics(db: Session, month: int):
         func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
 
     return {
-        "total expenses in a month": total,
-        "average expenses in month": round(average, 2),
-        "max expense in month": max_expense
+        "total": total,
+        "average": round(average, 2),
+        "max": max_expense
     }
 
 
@@ -94,3 +100,50 @@ def generate_visualization(db, month):
     image_stream.seek(0)
 
     return image_stream
+
+
+def generate_report(
+    db: Session,
+    category: str | None,
+    start_date: date | None,
+    end_date: date | None
+):
+    query = db.query(Expense)
+
+    # Filtr: kategoria
+    if category:
+        query = query.filter(Expense.category == category)
+
+    # Filtr: data początkowa
+    if start_date:
+        query = query.filter(Expense.created_at >= start_date)
+
+    # Filtr: data końcowa
+    if end_date:
+        query = query.filter(Expense.created_at <= end_date)
+
+    try:
+        expenses = query.all()
+    except SQLAlchemyError as e:
+        raise ValueError(f"Database error: {str(e)}")
+
+    if not expenses:
+        raise_not_found()
+
+    # Tworzenie CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Name", "Category", "Price", "Created At"])
+
+    for exp in expenses:
+        writer.writerow([
+            exp.id,
+            exp.name,
+            exp.category,
+            exp.price,
+            exp.created_at.isoformat() if exp.created_at else None
+        ])
+
+    output.seek(0)
+    return output
+
