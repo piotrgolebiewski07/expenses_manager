@@ -2,36 +2,43 @@ import csv
 import io
 from datetime import date
 
+import matplotlib
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.expenses.exception import raise_not_found
+from app.core.exception import ExpenseNotFoundException, NoExpensesFoundException, DatabaseException, \
+    InvalidMonthException
 from app.expenses.models import Expense
 from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
 
 
 def get_all_expenses(db: Session) -> list[Expense]:
-    expense: list[Expense] = db.query(Expense).all()
-    return expense
+    return db.query(Expense).all()
 
 
 def get_expense_by_id(db: Session, expense_id: int):
-    return db.query(Expense).filter(Expense.id == expense_id).first()
+    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise ExpenseNotFoundException()
+    return expense
 
 
 def create_expense(db: Session, dto: ExpenseCreateDTO):
     expense = Expense(name=dto.name, category=dto.category, price=dto.price)
     db.add(expense)
-    db.commit()     # Zatwierdzenie zmian w bazie danych
+    db.commit()
+    db.refresh(expense)
     return expense
 
 
 def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
     expense = get_expense_by_id(db, expense_id)
     if not expense:
-        return None
+        raise ExpenseNotFoundException()
     if dto.name is not None:
         expense.name = dto.name
     if dto.category is not None:
@@ -39,22 +46,27 @@ def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
     if dto.price is not None:
         expense.price = dto.price
     db.commit()
+    db.refresh(expense)
     return expense
 
 
 def delete_expense(db: Session, expense_id: int):
     expense = get_expense_by_id(db, expense_id)
     if not expense:
-        return None
+        raise ExpenseNotFoundException()
     db.delete(expense)
     db.commit()
     return expense
 
 
 def statistics(db: Session, month: int):
+    if month < 1 or month > 12:
+        raise InvalidMonthException()
+
     # Obliczanie sumy wydatków
     total = db.query(func.sum(Expense.price)).filter(
         func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+    total = total or 0
 
     # Obliczanie średniej wydatków
     average = db.query(func.avg(Expense.price)).filter(
@@ -63,6 +75,7 @@ def statistics(db: Session, month: int):
     # Najwyższy jednorazowy wydatek
     max_expense = db.query(func.max(Expense.price)).filter(
         func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+    max_expense = max_expense or 0
 
     return {
         "total": total,
@@ -71,13 +84,16 @@ def statistics(db: Session, month: int):
     }
 
 
-def generate_visualization(db, month):
+def generate_visualization(db: Session, month: int):
+    if month < 1 or month > 12:
+        raise InvalidMonthException()
+
     # Pobranie danych
     expenses = db.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}").all()
 
     # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
-        raise ValueError("Not expenses found for this month")
+        raise NoExpensesFoundException()
 
     # Grupowanie wydatków według kategorii
     categories = {}
@@ -125,10 +141,10 @@ def generate_report(
     try:
         expenses = query.all()
     except SQLAlchemyError as e:
-        raise ValueError(f"Database error: {str(e)}")
+        raise DatabaseException(str(e))
 
     if not expenses:
-        raise_not_found()
+        raise NoExpensesFoundException()
 
     # Tworzenie CSV
     output = io.StringIO()
