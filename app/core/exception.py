@@ -13,3 +13,7 @@ class DatabaseException(Exception):
 class InvalidMonthException(Exception):
     pass
 
+
+class CategoryNotFoundException(Exception):
+    pass
+

@@ -3,6 +3,7 @@ import io
 from datetime import date
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -10,9 +11,13 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.exception import ExpenseNotFoundException, NoExpensesFoundException, DatabaseException, \
-    InvalidMonthException
-from app.expenses.models import Expense
+from app.core.exception import (ExpenseNotFoundException,
+                                NoExpensesFoundException,
+                                DatabaseException,
+                                InvalidMonthException,
+                                CategoryNotFoundException
+                                )
+from app.expenses.models import Expense, Category
 from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
 
 
@@ -24,38 +29,51 @@ def get_expense_by_id(db: Session, expense_id: int):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise ExpenseNotFoundException()
+
     return expense
 
 
 def create_expense(db: Session, dto: ExpenseCreateDTO):
-    expense = Expense(name=dto.name, category=dto.category, price=dto.price)
+    category = db.query(Category).filter(Category.id == dto.category_id).first()
+    if not category:
+        raise CategoryNotFoundException()
+
+    expense = Expense(
+        name=dto.name,
+        price=dto.price,
+        category=category
+    )
+
     db.add(expense)
     db.commit()
     db.refresh(expense)
+
     return expense
 
 
 def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
     expense = get_expense_by_id(db, expense_id)
-    if not expense:
-        raise ExpenseNotFoundException()
     if dto.name is not None:
         expense.name = dto.name
-    if dto.category is not None:
-        expense.category = dto.category
+    if dto.category_id is not None:
+        category = db.query(Category).filter(Category.id == dto.category_id).first()
+        if not category:
+            raise CategoryNotFoundException()
+        expense.category = category
     if dto.price is not None:
         expense.price = dto.price
+
     db.commit()
     db.refresh(expense)
+
     return expense
 
 
 def delete_expense(db: Session, expense_id: int):
     expense = get_expense_by_id(db, expense_id)
-    if not expense:
-        raise ExpenseNotFoundException()
     db.delete(expense)
     db.commit()
+
     return expense
 
 
@@ -98,8 +116,7 @@ def generate_visualization(db: Session, month: int):
     # Grupowanie wydatków według kategorii
     categories = {}
     for expense in expenses:
-        categories[expense.category] = categories.get(expense.category, 0) + expense.price
-
+        categories[expense.category.name] = categories.get(expense.category.name, 0) + expense.price
 
     # Przygotowanie danych do wykresu
     labels = list(categories.keys())
@@ -111,7 +128,7 @@ def generate_visualization(db: Session, month: int):
 
     # Zapisanie wykresu do pamięci
     image_stream = io.BytesIO()
-    fig.savefig(image_stream, format="png")   # Zapis do obiektu Bytes IO
+    fig.savefig(image_stream, format="png")  # Zapis do obiektu Bytes IO
     plt.close(fig)
     image_stream.seek(0)
 
@@ -119,16 +136,17 @@ def generate_visualization(db: Session, month: int):
 
 
 def generate_report(
-    db: Session,
-    category: str | None,
-    start_date: date | None,
-    end_date: date | None
+        db: Session,
+        category: str | None,
+        start_date: date | None,
+        end_date: date | None
 ):
     query = db.query(Expense)
 
     # Filtr: kategoria
     if category:
-        query = query.filter(Expense.category == category)
+        query = query.join(Category)
+        query = query.filter(Category.name == category)
 
     # Filtr: data początkowa
     if start_date:
@@ -155,11 +173,10 @@ def generate_report(
         writer.writerow([
             exp.id,
             exp.name,
-            exp.category,
+            exp.category.name,
             exp.price,
             exp.created_at.isoformat() if exp.created_at else None
         ])
 
     output.seek(0)
     return output
-

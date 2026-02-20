@@ -5,23 +5,22 @@ from typing import Optional
 
 class ExpenseCreateDTO(BaseModel):
     name: str
-    category: str
+    category_id: int
     price: int
 
 
 class ExpenseUpdateDTO(BaseModel):
-    name: Optional[str] | None = None
-    category: Optional[str] | None = None
-    price: Optional[int] | None = None
+    name: str | None = None
+    category_id: int | None = None
+    price: int | None = None
 
 
 class ExpenseDTO(BaseModel):
     id: int
     name: str
-    category: str
     price: int
     created_at: datetime
-
+    category: str
 
     class Config:
         from_attributes = True

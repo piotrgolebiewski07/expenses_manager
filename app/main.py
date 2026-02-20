@@ -5,8 +5,12 @@ from app.expenses.routers import router as expenses_router
 from app.expenses.database import engine
 from app.expenses.models import Base
 
-from app.core.exception import ExpenseNotFoundException, NoExpensesFoundException, DatabaseException, \
-    InvalidMonthException
+from app.core.exception import (ExpenseNotFoundException,
+                                NoExpensesFoundException,
+                                DatabaseException,
+                                InvalidMonthException,
+                                CategoryNotFoundException
+                                )
 
 
 @asynccontextmanager
@@ -56,5 +60,15 @@ async def invalid_month_handler(request: Request, exc: InvalidMonthException):
         content={"detail": "Month must be between 1 and 12"}
 
     )
+
+
+@app.exception_handler(CategoryNotFoundException)
+async def category_not_found_handler(request: Request, exc: CategoryNotFoundException):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Category not found"}
+    )
+
+
 app.include_router(expenses_router)
 
