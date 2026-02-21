@@ -3,6 +3,14 @@ from datetime import datetime
 from typing import Optional
 
 
+class CategoryNestedDTO(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
 class ExpenseCreateDTO(BaseModel):
     name: str
     category_id: int
@@ -20,7 +28,7 @@ class ExpenseDTO(BaseModel):
     name: str
     price: int
     created_at: datetime
-    category: str
+    category: CategoryNestedDTO
 
     class Config:
         from_attributes = True
