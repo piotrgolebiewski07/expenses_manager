@@ -1,6 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
 
 
 class CategoryNestedDTO(BaseModel):
@@ -32,4 +31,17 @@ class ExpenseDTO(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserDTO(BaseModel):
+    id: int
+    email: EmailStr
+
+    class Config:
+        from_attributes = True  # Pydantic x2
 

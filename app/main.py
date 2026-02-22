@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.expenses.routers import router as expenses_router
 from app.expenses.database import engine
 from app.expenses.models import Base
+from app.auth.routers import router as auth_router
 
 from app.core.exception import (ExpenseNotFoundException,
                                 NoExpensesFoundException,
@@ -71,4 +72,5 @@ async def category_not_found_handler(request: Request, exc: CategoryNotFoundExce
 
 
 app.include_router(expenses_router)
+app.include_router(auth_router)
 

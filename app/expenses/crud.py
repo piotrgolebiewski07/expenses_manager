@@ -19,6 +19,9 @@ from app.core.exception import (ExpenseNotFoundException,
                                 )
 from app.expenses.models import Expense, Category
 from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
+from app.expenses.models import User
+from app.core.security import hash_password
+from app.expenses.schemas import UserCreate
 
 
 def get_all_expenses(db: Session) -> list[Expense]:
@@ -180,3 +183,24 @@ def generate_report(
 
     output.seek(0)
     return output
+
+
+def create_user(db, user: UserCreate):
+    hashed_pw = hash_password(user.password)
+
+    print(user.password)
+    print(len(user.password))
+    print(type(user.password))
+    print(repr(user.password))
+
+    db_user = User(
+        email=user.email,
+        hashed_password=hashed_pw
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
+
