@@ -9,7 +9,14 @@ from app.expenses.schemas import UserCreate, UserDTO
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/register", response_model=UserDTO, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserDTO,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        409: {"description": "User already exists"}
+    }
+)
 def register(user: UserCreate, db: Session = Depends(get_session)):
     return create_user(db, user)
 
