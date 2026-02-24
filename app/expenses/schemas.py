@@ -59,6 +59,12 @@ class UserDTO(BaseModel):
         from_attributes = True  # Pydantic x2
 
 
-class ErrorResponse(BaseModel):
-    detail: str
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 

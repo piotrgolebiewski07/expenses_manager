@@ -205,3 +205,7 @@ def create_user(db, user: UserCreate):
 
     return db_user
 
+
+def get_user_by_email(db: Session, email: str):
+    user = db.query(User).filter(User.email == email).first()
+    return user

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from app.expenses.routers import router as expenses_router
@@ -104,8 +104,20 @@ async def request_validation_handler(request: Request, exc: RequestValidationErr
 
     return JSONResponse(
         status_code=422,
-        content={"detail": formatted_errors}
+        content={"errors": formatted_errors}
     )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict) and "errors" in exc.detail:
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"errors": [{"message": str(exc.detail), "field": None}]},
+    )
+
 
 app.include_router(expenses_router)
 app.include_router(auth_router)
