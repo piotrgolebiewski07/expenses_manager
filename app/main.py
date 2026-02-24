@@ -2,10 +2,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from app.expenses.routers import router as expenses_router
-from app.expenses.database import engine
-from app.expenses.models import Base
-from app.auth.routers import router as auth_router
+from app.api.expenses import router as expenses_router
+from app.db.session import engine
+from app.models.models import Base
+from app.api.auth import router as auth_router
 
 from app.core.exception import (ExpenseNotFoundException,
                                 NoExpensesFoundException,

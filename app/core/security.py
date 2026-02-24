@@ -6,9 +6,9 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from starlette import status
 
-from app.expenses.database import get_session
+from app.db.session import get_session
 from sqlalchemy.orm import Session
-from app.expenses.models import User
+from app.models.models import User
 
 
 security = HTTPBearer()

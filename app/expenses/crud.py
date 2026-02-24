@@ -18,11 +18,9 @@ from app.core.exception import (ExpenseNotFoundException,
                                 CategoryNotFoundException,
                                 UserAlreadyExistsException
                                 )
-from app.expenses.models import Expense, Category
-from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
-from app.expenses.models import User
+from app.models.models import Expense, Category, User
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
 from app.core.security import hash_password
-from app.expenses.schemas import UserCreate
 
 
 def get_all_expenses(db: Session) -> list[Expense]:
@@ -209,3 +207,4 @@ def create_user(db, user: UserCreate):
 def get_user_by_email(db: Session, email: str):
     user = db.query(User).filter(User.email == email).first()
     return user
+

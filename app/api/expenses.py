@@ -3,8 +3,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import date
 
-from app.expenses.database import get_session
-from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, ExpenseDTO
+from app.db.session import get_session
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, ExpenseDTO
 from app.expenses.crud import (
     get_all_expenses,
     get_expense_by_id,
