@@ -1,9 +1,10 @@
+import jwt
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-
-from jose import jwt, JWTError
+from jwt import PyJWTError
 from starlette import status
 
 from app.db.session import get_session
@@ -57,7 +58,7 @@ def get_current_user(
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except PyJWTError:
         raise credentials_exception
 
     user = db.query(User).filter(User.id == int(user_id)).first()
