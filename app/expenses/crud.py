@@ -1,12 +1,6 @@
 import csv
 import io
 from datetime import date
-
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -106,6 +100,10 @@ def statistics(db: Session, month: int, current_user: User):
 
 
 def generate_visualization(db: Session, month: int, current_user: User):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
