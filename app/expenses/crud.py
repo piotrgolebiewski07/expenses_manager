@@ -15,10 +15,12 @@ from app.core.exception import (ExpenseNotFoundException,
                                 NoExpensesFoundException,
                                 DatabaseException,
                                 InvalidMonthException,
-                                CategoryNotFoundException
+                                CategoryNotFoundException,
+                                UserAlreadyExistsException
                                 )
-from app.expenses.models import Expense, Category
-from app.expenses.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
+from app.models.models import Expense, Category, User
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
+from app.core.security import hash_password
 
 
 def get_all_expenses(db: Session) -> list[Expense]:
@@ -180,3 +182,29 @@ def generate_report(
 
     output.seek(0)
     return output
+
+
+def create_user(db, user: UserCreate):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+
+    if existing_user:
+        raise UserAlreadyExistsException()
+
+    hashed_pw = hash_password(user.password)
+
+    db_user = User(
+        email=user.email,
+        hashed_password=hashed_pw
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
+
+
+def get_user_by_email(db: Session, email: str):
+    user = db.query(User).filter(User.email == email).first()
+    return user
+

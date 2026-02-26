@@ -17,3 +17,7 @@ class InvalidMonthException(Exception):
 class CategoryNotFoundException(Exception):
     pass
 
+
+class UserAlreadyExistsException(Exception):
+    pass
+
