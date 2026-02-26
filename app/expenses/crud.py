@@ -23,19 +23,19 @@ from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
 from app.core.security import hash_password
 
 
-def get_all_expenses(db: Session) -> list[Expense]:
-    return db.query(Expense).all()
+def get_all_expenses(db: Session, current_user: User) -> list[Expense]:
+    return db.query(Expense).filter(Expense.user_id == current_user.id).all()
 
 
-def get_expense_by_id(db: Session, expense_id: int):
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+def get_expense_by_id(db: Session, expense_id: int, current_user: User):
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == current_user.id).first()
     if not expense:
         raise ExpenseNotFoundException()
 
     return expense
 
 
-def create_expense(db: Session, dto: ExpenseCreateDTO):
+def create_expense(db: Session, dto: ExpenseCreateDTO, current_user: User):
     category = db.query(Category).filter(Category.id == dto.category_id).first()
     if not category:
         raise CategoryNotFoundException()
@@ -43,7 +43,8 @@ def create_expense(db: Session, dto: ExpenseCreateDTO):
     expense = Expense(
         name=dto.name,
         price=dto.price,
-        category=category
+        category=category,
+        user_id=current_user.id
     )
 
     db.add(expense)
@@ -53,8 +54,8 @@ def create_expense(db: Session, dto: ExpenseCreateDTO):
     return expense
 
 
-def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
-    expense = get_expense_by_id(db, expense_id)
+def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO, current_user: User):
+    expense = get_expense_by_id(db, expense_id, current_user)
     if dto.name is not None:
         expense.name = dto.name
     if dto.category_id is not None:
@@ -71,30 +72,30 @@ def update_expense(db: Session, expense_id: int, dto: ExpenseUpdateDTO):
     return expense
 
 
-def delete_expense(db: Session, expense_id: int):
-    expense = get_expense_by_id(db, expense_id)
+def delete_expense(db: Session, expense_id: int, current_user: User):
+    expense = get_expense_by_id(db, expense_id, current_user)
     db.delete(expense)
     db.commit()
 
     return expense
 
 
-def statistics(db: Session, month: int):
+def statistics(db: Session, month: int, current_user: User):
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
     # Obliczanie sumy wydatków
     total = db.query(func.sum(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar()
     total = total or 0
 
     # Obliczanie średniej wydatków
     average = db.query(func.avg(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}").scalar() or 0
+        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar() or 0
 
     # Najwyższy jednorazowy wydatek
     max_expense = db.query(func.max(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}").scalar()
+        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar()
     max_expense = max_expense or 0
 
     return {
@@ -104,12 +105,13 @@ def statistics(db: Session, month: int):
     }
 
 
-def generate_visualization(db: Session, month: int):
+def generate_visualization(db: Session, month: int, current_user: User):
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
     # Pobranie danych
-    expenses = db.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}").all()
+    expenses = db.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}",
+                                        Expense.user_id == current_user.id).all()
 
     # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
@@ -141,9 +143,10 @@ def generate_report(
         db: Session,
         category: str | None,
         start_date: date | None,
-        end_date: date | None
+        end_date: date | None,
+        current_user: User
 ):
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
     # Filtr: kategoria
     if category:

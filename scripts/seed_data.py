@@ -1,8 +1,9 @@
 import random
 from datetime import datetime, timedelta
 
-from app.expenses.database import Session
-from app.expenses.models import Expense, Category
+from app.db.session import Session
+from app.models.models import Expense, Category, User
+from app.core.security import hash_password
 
 
 def get_or_create_category(db, name: str):
@@ -33,7 +34,13 @@ def seed():
     db = Session()
     db.query(Expense).delete()
     db.query(Category).delete()
+    db.query(User).delete()
     db.commit()
+
+    user = User(email="seed@example.com", hashed_password=hash_password("111111Aa"))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
     try:
         categories = {
@@ -52,7 +59,8 @@ def seed():
                 name="Rent",
                 price=random.randint(1800,2400),
                 created_at=random_date_in_month(current_year, month),
-                category=categories["Rent"]
+                category=categories["Rent"],
+                user_id=user.id
             )
             db.add(rent)
 
@@ -63,7 +71,8 @@ def seed():
                     name="Food",
                     price=random.randint(20,120),
                     created_at=random_date_in_month(current_year,month),
-                    category=categories["Food"]
+                    category=categories["Food"],
+                    user_id=user.id
                     )
                 db.add(expense)
 
@@ -74,7 +83,8 @@ def seed():
                     name="Transport",
                     price=random.randint(50,200),
                     created_at=random_date_in_month(current_year,month),
-                    category=categories["Transport"]
+                    category=categories["Transport"],
+                    user_id=user.id
                     )
                 db.add(expense)
 
@@ -85,7 +95,8 @@ def seed():
                     name="Entertainment",
                     price=random.randint(50, 400),
                     created_at=random_date_in_month(current_year, month),
-                    category=categories["Entertainment"]
+                    category=categories["Entertainment"],
+                    user_id=user.id
                 )
                 db.add(expense)
 
@@ -96,7 +107,8 @@ def seed():
                     name="Health",
                     price=random.randint(50, 300),
                     created_at=random_date_in_month(current_year, month),
-                    category=categories["Health"]
+                    category=categories["Health"],
+                    user_id=user.id
                 )
                 db.add(expense)
 

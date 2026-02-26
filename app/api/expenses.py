@@ -3,6 +3,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from datetime import date
 
+from app.core.security import get_current_user
+from app.models.models import User
 from app.db.session import get_session
 from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, ExpenseDTO
 from app.expenses.crud import (
@@ -22,34 +24,34 @@ router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
 
 @router.get("/", response_model=list[ExpenseDTO], status_code=status.HTTP_200_OK)
-def read_all_expenses_endpoint(db: Session = Depends(get_session)):
-    return get_all_expenses(db)
+def read_all_expenses_endpoint(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return get_all_expenses(db, current_user)
 
 
 @router.post("/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
-def create_expense_endpoint(dto: ExpenseCreateDTO, db: Session = Depends(get_session)):
-    return create_expense(db, dto)
+def create_expense_endpoint(dto: ExpenseCreateDTO, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return create_expense(db, dto, current_user)
 
 
 @router.put("/{expense_id}", response_model=ExpenseDTO, status_code=status.HTTP_200_OK)
-def update_expenses_endpoint(expense_id: int, dto: ExpenseUpdateDTO, db: Session = Depends(get_session)):
-    return update_expense(db, expense_id, dto)
+def update_expenses_endpoint(expense_id: int, dto: ExpenseUpdateDTO, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return update_expense(db, expense_id, dto, current_user)
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_expense_endpoint(expense_id: int, db: Session = Depends(get_session)):
-    delete_expense(db, expense_id)
+def delete_expense_endpoint(expense_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    delete_expense(db, expense_id, current_user)
     return None
 
 
 @router.get("/statistics/{month}", status_code=status.HTTP_200_OK)
-def get_statistics(month: int, db: Session = Depends(get_session)):
-    return statistics(db, month)
+def get_statistics(month: int, db: Session = Depends(get_session),current_user: User = Depends(get_current_user)):
+    return statistics(db, month, current_user)
 
 
 @router.get("/visualization/{month}", status_code=status.HTTP_200_OK)
-def get_visualization_endpoint(month: int, db: Session = Depends(get_session)):
-    image_stream = generate_visualization(db, month)
+def get_visualization_endpoint(month: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    image_stream = generate_visualization(db, month, current_user)
     return StreamingResponse(image_stream, media_type='image/png')
 
 
@@ -58,9 +60,10 @@ def generate_report_endpoint(
     category: str | None = Query(None),
     start_date: date | None = Query(None),
     end_date: date | None = Query(None),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
-    csv_stream = generate_report(db, category, start_date, end_date)
+    csv_stream = generate_report(db, category, start_date, end_date, current_user)
     return StreamingResponse(
         csv_stream,
         media_type="text/csv",
@@ -69,6 +72,6 @@ def generate_report_endpoint(
 
 
 @router.get("/{expense_id}", response_model=ExpenseDTO, status_code=status.HTTP_200_OK)
-def read_expenses_by_id_endpoint(expense_id: int, db: Session = Depends(get_session)):
-    return get_expense_by_id(db, expense_id)
+def read_expenses_by_id_endpoint(expense_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    return get_expense_by_id(db, expense_id, current_user)
 
