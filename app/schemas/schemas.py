@@ -1,8 +1,7 @@
-from pydantic import BaseModel, EmailStr, field_validator, Field
 from datetime import datetime
-
-
 import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class CategoryNestedDTO(BaseModel):

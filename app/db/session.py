@@ -1,7 +1,7 @@
-import os
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent

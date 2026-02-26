@@ -1,23 +1,23 @@
-from fastapi import APIRouter, Depends, status, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 from datetime import date
 
+from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
 from app.core.security import get_current_user
-from app.models.models import User
 from app.db.session import get_session
-from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, ExpenseDTO
 from app.expenses.crud import (
+    create_expense,
+    delete_expense,
+    generate_report,
+    generate_visualization,
     get_all_expenses,
     get_expense_by_id,
-    create_expense,
-    update_expense,
-    delete_expense,
     statistics,
-    generate_visualization,
-    generate_report
-
+    update_expense,
 )
+from app.models.models import User
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseDTO, ExpenseUpdateDTO
 
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])

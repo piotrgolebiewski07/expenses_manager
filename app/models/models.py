@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, func, ForeignKey
+from enum import Enum
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import declarative_base, relationship
-from enum import Enum
 
 
 # Klasa bazowa dla SQLAlchemy

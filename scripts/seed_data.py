@@ -1,9 +1,9 @@
-import random
 from datetime import datetime, timedelta
+import random
 
-from app.db.session import Session
-from app.models.models import Expense, Category, User
 from app.core.security import hash_password
+from app.db.session import Session
+from app.models.models import Category, Expense, User
 
 
 def get_or_create_category(db, name: str):
@@ -117,6 +117,7 @@ def seed():
 
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed()
