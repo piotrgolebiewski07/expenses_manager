@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from datetime import datetime
+
 
 import re
 
@@ -36,8 +37,12 @@ class ExpenseDTO(BaseModel):
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(
+        example="user@example.com"
+    )
+    password: str = Field(
+        example="111111Aa"
+    )
 
     @field_validator("password")  # type: ignore[misc]
     @classmethod
@@ -60,8 +65,12 @@ class UserDTO(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(
+        example="user@example.com"
+    )
+    password: str = Field(
+        example="111111Aa"
+    )
 
 
 class Token(BaseModel):

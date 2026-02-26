@@ -1,11 +1,12 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from pathlib import Path
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # .../app/db
-BASE_DIR = os.path.dirname(BASE_DIR)                  # .../app
-DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'new.sqlite')}"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATABASE_URL = f"sqlite:///{BASE_DIR/ 'new.sqlite'}"
+
 engine = create_engine(DATABASE_URL, echo=False)
 Session = sessionmaker(bind=engine)
 

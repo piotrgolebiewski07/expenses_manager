@@ -1,12 +1,18 @@
+# std
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+# third party
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
+
+# local
 from app.api.expenses import router as expenses_router
 from app.db.session import engine
 from app.models.models import Base
 from app.api.auth import router as auth_router
-
 from app.core.exception import (ExpenseNotFoundException,
                                 NoExpensesFoundException,
                                 DatabaseException,
@@ -14,6 +20,10 @@ from app.core.exception import (ExpenseNotFoundException,
                                 CategoryNotFoundException,
                                 UserAlreadyExistsException
                                 )
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 @asynccontextmanager
@@ -30,6 +40,16 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return {"status": "ok"}
 
 
 @app.exception_handler(ExpenseNotFoundException)
