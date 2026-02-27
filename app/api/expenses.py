@@ -17,15 +17,19 @@ from app.expenses.crud import (
     update_expense,
 )
 from app.models.models import User
-from app.schemas.schemas import ExpenseCreateDTO, ExpenseDTO, ExpenseUpdateDTO
-
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseDTO, ExpenseUpdateDTO, PaginatedExpenseDTO
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
 
-@router.get("/", response_model=list[ExpenseDTO], status_code=status.HTTP_200_OK)
-def read_all_expenses_endpoint(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    return get_all_expenses(db, current_user)
+@router.get("/", response_model=PaginatedExpenseDTO, status_code=status.HTTP_200_OK)
+def read_all_expenses_endpoint(
+        limit: int = Query(10, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
+    return get_all_expenses(db, current_user, limit, offset)
 
 
 @router.post("/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)

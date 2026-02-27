@@ -35,6 +35,13 @@ class ExpenseDTO(BaseModel):
         from_attributes = True
 
 
+class PaginatedExpenseDTO(BaseModel):
+    items: list[ExpenseDTO]
+    total: int
+    limit: int
+    offset: int
+
+
 class UserCreate(BaseModel):
     email: EmailStr = Field(
         example="user@example.com"

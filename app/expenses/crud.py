@@ -19,8 +19,24 @@ from app.models.models import Category, Expense, User
 from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
 
 
-def get_all_expenses(db: Session, current_user: User) -> list[Expense]:
-    return db.query(Expense).filter(Expense.user_id == current_user.id).all()
+def get_all_expenses(db: Session, current_user: User, limit: int, offset: int):
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+
+    total = query.with_entities(func.count()).scalar()
+
+    items = (
+        query
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
 
 
 def get_expense_by_id(db: Session, expense_id: int, current_user: User):
