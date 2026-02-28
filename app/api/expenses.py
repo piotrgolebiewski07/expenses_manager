@@ -45,7 +45,7 @@ def read_all_expenses_endpoint(
         if not category:
             raise HTTPException(status_code=400, detail="Invalid category_id")
 
-        if category.name.lower != category_name.lower:
+        if category.name.lower() != category_name.lower():
             raise HTTPException(
                 status_code=400,
                 detail="category_id does not match category_name"
