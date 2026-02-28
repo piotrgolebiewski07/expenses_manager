@@ -4,7 +4,7 @@ import io
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.exception import (
     CategoryNotFoundException,
@@ -30,7 +30,6 @@ def get_all_expenses(db: Session,
                      category_id: int | None,
                      category_name: str | None
                      ):
-
     query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
     # filter by price range
@@ -57,9 +56,9 @@ def get_all_expenses(db: Session,
     column = columns[sort_by]
 
     if order == "desc":
-        query = query.order_by(column.desc())
+        query = query.order_by(column.desc(), Expense.id.desc())
     else:
-        query = query.order_by(column.asc())
+        query = query.order_by(column.asc(), Expense.id.asc())
 
     total = query.order_by(None).count()
 
@@ -135,23 +134,24 @@ def statistics(db: Session, month: int, current_user: User):
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
-    # Obliczanie sumy wydatków
-    total = db.query(func.sum(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar()
+    result = db.query(
+        func.sum(Expense.price),
+        func.avg(Expense.price),
+        func.max(Expense.price)
+    ).filter(
+        func.strftime("%m", Expense.created_at) == f"{month:02}",
+        Expense.user_id == current_user.id
+    ).one()
+
+    total, average, max_expense = result
+
     total = total or 0
-
-    # Obliczanie średniej wydatków
-    average = db.query(func.avg(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar() or 0
-
-    # Najwyższy jednorazowy wydatek
-    max_expense = db.query(func.max(Expense.price)).filter(
-        func.strftime("%m", Expense.created_at) == f"{month:02}", Expense.user_id == current_user.id).scalar()
+    average = round(average or 0, 2)
     max_expense = max_expense or 0
 
     return {
         "total": total,
-        "average": round(average, 2),
+        "average": average,
         "max": max_expense
     }
 
@@ -165,8 +165,10 @@ def generate_visualization(db: Session, month: int, current_user: User):
         raise InvalidMonthException()
 
     # Pobranie danych
-    expenses = db.query(Expense).filter(func.strftime("%m", Expense.created_at) == f"{month:02}",
-                                        Expense.user_id == current_user.id).all()
+    expenses = (db.query(Expense)
+                .options(joinedload(Expense.category))
+                .filter(func.strftime("%m", Expense.created_at) == f"{month:02}",
+                        Expense.user_id == current_user.id).all())
 
     # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
@@ -265,4 +267,3 @@ def create_user(db, user: UserCreate):
 def get_user_by_email(db: Session, email: str):
     user = db.query(User).filter(User.email == email).first()
     return user
-

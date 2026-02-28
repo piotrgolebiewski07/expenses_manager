@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -17,7 +17,7 @@ from app.expenses.crud import (
     statistics,
     update_expense,
 )
-from app.models.models import User
+from app.models.models import User, Category
 from app.schemas.schemas import ExpenseCreateDTO, ExpenseDTO, ExpenseUpdateDTO, PaginatedExpenseDTO
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -36,6 +36,21 @@ def read_all_expenses_endpoint(
         db: Session = Depends(get_session),
         current_user: User = Depends(get_current_user)
 ):
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=400, detail="min_price cannot be greater than max_price")
+
+    if category_name is not None and category_id is not None:
+        category = db.query(Category).filter(Category.id == category_id).first()
+
+        if not category:
+            raise HTTPException(status_code=400, detail="Invalid category_id")
+
+        if category.name.lower != category_name.lower:
+            raise HTTPException(
+                status_code=400,
+                detail="category_id does not match category_name"
+            )
+
     return get_all_expenses(
         db, current_user,
         limit, offset,
