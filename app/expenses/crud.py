@@ -19,10 +19,49 @@ from app.models.models import Category, Expense, User
 from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
 
 
-def get_all_expenses(db: Session, current_user: User, limit: int, offset: int):
+def get_all_expenses(db: Session,
+                     current_user: User,
+                     limit: int,
+                     offset: int,
+                     sort_by: str,
+                     order: str,
+                     min_price: int | None,
+                     max_price: int | None,
+                     category_id: int | None,
+                     category_name: str | None
+                     ):
+
     query = db.query(Expense).filter(Expense.user_id == current_user.id)
 
-    total = query.with_entities(func.count()).scalar()
+    # filter by price range
+    if min_price is not None:
+        query = query.filter(Expense.price >= min_price)
+    if max_price is not None:
+        query = query.filter(Expense.price <= max_price)
+
+    if category_name is not None:
+        query = query.join(Category).filter(Category.name == category_name)
+
+    # filter by category
+    if category_id is not None:
+        query = query.filter(Expense.category_id == category_id)
+
+    # dynamic sorting
+    columns = {
+        "id": Expense.id,
+        "name": Expense.name,
+        "price": Expense.price,
+        "created_at": Expense.created_at
+    }
+
+    column = columns[sort_by]
+
+    if order == "desc":
+        query = query.order_by(column.desc())
+    else:
+        query = query.order_by(column.asc())
+
+    total = query.order_by(None).count()
 
     items = (
         query

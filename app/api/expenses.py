@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
@@ -26,10 +27,23 @@ router = APIRouter(prefix="/expenses", tags=["Expenses"])
 def read_all_expenses_endpoint(
         limit: int = Query(10, ge=1, le=100),
         offset: int = Query(0, ge=0),
+        sort_by: Literal["id", "name", "price", "created_at"] = "created_at",
+        order: Literal["asc", "desc"] = "desc",
+        min_price: int | None = Query(None, ge=0),
+        max_price: int | None = Query(None, ge=0),
+        category_id: int | None = Query(None, ge=1),
+        category_name: str | None = Query(None, min_length=1),
         db: Session = Depends(get_session),
         current_user: User = Depends(get_current_user)
 ):
-    return get_all_expenses(db, current_user, limit, offset)
+    return get_all_expenses(
+        db, current_user,
+        limit, offset,
+        sort_by, order,
+        min_price,
+        max_price,
+        category_id,
+        category_name)
 
 
 @router.post("/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
