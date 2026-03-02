@@ -11,6 +11,7 @@ from app.core.exception import (
     DatabaseException,
     ExpenseNotFoundException,
     InvalidMonthException,
+    InvalidYearException,
     NoExpensesFoundException,
     UserAlreadyExistsException,
 )
@@ -46,7 +47,7 @@ def get_all_expenses(db: Session,
 
     if end_date is not None:
         end_dt = datetime.combine(end_date, time.max)
-        query = query.filter(Expense.created_at <= end_date)
+        query = query.filter(Expense.created_at <= end_dt)
 
     if category_name is not None:
         query = query.join(Category).filter(Category.name == category_name)
@@ -63,7 +64,7 @@ def get_all_expenses(db: Session,
         "created_at": Expense.created_at
     }
 
-    column = columns[sort_by]
+    column = columns.get(sort_by, Expense.created_at)
 
     if order == "desc":
         query = query.order_by(column.desc(), Expense.id.desc())
@@ -145,7 +146,7 @@ def statistics(db: Session, year:int, month: int, current_user: User):
         raise InvalidMonthException()
 
     if year < 2000 or year > 2100:
-        raise ValueError("Invalid year")
+        raise InvalidYearException()
 
     result = db.query(
         func.sum(Expense.price),
@@ -177,7 +178,10 @@ def statistics(db: Session, year:int, month: int, current_user: User):
         .all()
     )
 
-    by_category = [{"category": name, "total": total or 0} for name, total in category_stats]
+    by_category = [
+        {"category": name, "total": total or 0}
+        for name, total in category_stats
+    ]
 
     return {
         "total": total,
@@ -188,7 +192,7 @@ def statistics(db: Session, year:int, month: int, current_user: User):
     }
 
 
-def generate_visualization(db: Session, month: int, current_user: User):
+def generate_visualization(db: Session, year: int, month: int, current_user: User):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -196,11 +200,19 @@ def generate_visualization(db: Session, month: int, current_user: User):
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
+    if year < 2000 or year > 2100:
+        raise InvalidYearException()
+
     # Pobranie danych
     expenses = (db.query(Expense)
                 .options(joinedload(Expense.category))
-                .filter(func.strftime("%m", Expense.created_at) == f"{month:02}",
-                        Expense.user_id == current_user.id).all())
+                .filter(
+            func.strftime("%m", Expense.created_at) == f"{month:02}",
+                    func.strftime("%Y", Expense.created_at) == str(year),
+                    Expense.user_id == current_user.id
+                )
+                .all()
+            )
 
     # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
@@ -209,7 +221,8 @@ def generate_visualization(db: Session, month: int, current_user: User):
     # Grupowanie wydatków według kategorii
     categories = {}
     for expense in expenses:
-        categories[expense.category.name] = categories.get(expense.category.name, 0) + expense.price
+        name = expense.category.name
+        categories[name] = categories.get(name, 0) + expense.price
 
     # Przygotowanie danych do wykresu
     labels = list(categories.keys())

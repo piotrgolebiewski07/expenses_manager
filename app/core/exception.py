@@ -14,6 +14,10 @@ class InvalidMonthException(Exception):
     pass
 
 
+class InvalidYearException(Exception):
+    pass
+
+
 class CategoryNotFoundException(Exception):
     pass
 
