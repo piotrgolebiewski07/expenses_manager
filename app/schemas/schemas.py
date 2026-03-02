@@ -72,7 +72,7 @@ class UserDTO(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr = Field(
-        example="user@example.com"
+        example="seed@example.com"
     )
     password: str = Field(
         example="111111Aa"

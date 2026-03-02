@@ -1,5 +1,5 @@
 import csv
-from datetime import date
+from datetime import date, datetime, time
 import io
 
 from sqlalchemy import func
@@ -27,6 +27,8 @@ def get_all_expenses(db: Session,
                      order: str,
                      min_price: int | None,
                      max_price: int | None,
+                     start_date: date | None,
+                     end_date: date | None,
                      category_id: int | None,
                      category_name: str | None
                      ):
@@ -37,6 +39,14 @@ def get_all_expenses(db: Session,
         query = query.filter(Expense.price >= min_price)
     if max_price is not None:
         query = query.filter(Expense.price <= max_price)
+
+    if start_date is not None:
+        start_dt = datetime.combine(start_date, time.min)
+        query = query.filter(Expense.created_at >= start_dt)
+
+    if end_date is not None:
+        end_dt = datetime.combine(end_date, time.max)
+        query = query.filter(Expense.created_at <= end_date)
 
     if category_name is not None:
         query = query.join(Category).filter(Category.name == category_name)

@@ -31,6 +31,8 @@ def read_all_expenses_endpoint(
         order: Literal["asc", "desc"] = "desc",
         min_price: int | None = Query(None, ge=0),
         max_price: int | None = Query(None, ge=0),
+        start_date: date | None = Query(None, description="Start date in format YYYY-MM-DD", example="2025-01-01"),
+        end_date: date | None = Query(None, description="End date in format YYYY-MM-DD", example="2025-12-31"),
         category_id: int | None = Query(None, ge=1),
         category_name: str | None = Query(None, min_length=1),
         db: Session = Depends(get_session),
@@ -38,6 +40,9 @@ def read_all_expenses_endpoint(
 ):
     if min_price is not None and max_price is not None and min_price > max_price:
         raise HTTPException(status_code=400, detail="min_price cannot be greater than max_price")
+
+    if start_date is not None and end_date is not None and start_date > end_date:
+        raise HTTPException(status_code=400, detail="start date cannot be greater than end date")
 
     if category_name is not None and category_id is not None:
         category = db.query(Category).filter(Category.id == category_id).first()
@@ -57,6 +62,8 @@ def read_all_expenses_endpoint(
         sort_by, order,
         min_price,
         max_price,
+        start_date,
+        end_date,
         category_id,
         category_name)
 
