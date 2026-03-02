@@ -77,9 +77,9 @@ def delete_expense_endpoint(expense_id: int, db: Session = Depends(get_session),
     return None
 
 
-@router.get("/statistics/{month}", status_code=status.HTTP_200_OK)
-def get_statistics(month: int, db: Session = Depends(get_session),current_user: User = Depends(get_current_user)):
-    return statistics(db, month, current_user)
+@router.get("/statistics/{year}/{month}", status_code=status.HTTP_200_OK)
+def get_statistics(year: int, month: int, db: Session = Depends(get_session),current_user: User = Depends(get_current_user)):
+    return statistics(db, year, month, current_user)
 
 
 @router.get("/visualization/{month}", status_code=status.HTTP_200_OK)

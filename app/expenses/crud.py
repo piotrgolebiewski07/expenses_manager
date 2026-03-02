@@ -130,29 +130,51 @@ def delete_expense(db: Session, expense_id: int, current_user: User):
     return expense
 
 
-def statistics(db: Session, month: int, current_user: User):
+def statistics(db: Session, year:int, month: int, current_user: User):
     if month < 1 or month > 12:
         raise InvalidMonthException()
+
+    if year < 2000 or year > 2100:
+        raise ValueError("Invalid year")
 
     result = db.query(
         func.sum(Expense.price),
         func.avg(Expense.price),
-        func.max(Expense.price)
+        func.max(Expense.price),
+        func.count(Expense.id)
     ).filter(
         func.strftime("%m", Expense.created_at) == f"{month:02}",
+        func.strftime("%Y", Expense.created_at) == str(year),
         Expense.user_id == current_user.id
     ).one()
 
-    total, average, max_expense = result
+    total, average, max_expense, count = result
 
     total = total or 0
     average = round(average or 0, 2)
     max_expense = max_expense or 0
+    count = count or 0
+
+    category_stats = (
+        db.query(Category.name, func.sum(Expense.price))
+        .join(Expense, Expense.category_id == Category.id)
+        .filter(
+            func.strftime("%m", Expense.created_at) == f"{month:02}",
+            func.strftime("%Y", Expense.created_at) == str(year),
+            Expense.user_id == current_user.id
+        )
+        .group_by(Category.name)
+        .all()
+    )
+
+    by_category = [{"category": name, "total": total or 0} for name, total in category_stats]
 
     return {
         "total": total,
         "average": average,
-        "max": max_expense
+        "max": max_expense,
+        "count": count,
+        "by_category": by_category
     }
 
 
