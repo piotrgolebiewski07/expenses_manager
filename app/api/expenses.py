@@ -118,7 +118,7 @@ def get_visualization_endpoint(
     return StreamingResponse(image_stream, media_type='image/png')
 
 
-@router.get("/export/", summary="Generate a CSV report for expenses")
+@router.get("/export/", summary="Generate an Excel report for expenses")
 def generate_report_endpoint(
     category: str | None = Query(None),
     start_date: date | None = Query(None),
@@ -126,11 +126,14 @@ def generate_report_endpoint(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    csv_stream = generate_report(db, category, start_date, end_date, current_user)
+    file_stream = generate_report(db, category, start_date, end_date, current_user)
+
     return StreamingResponse(
-        csv_stream,
-        media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="expenses_report.csv"'}
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="expenses_report.xlsx"'
+        }
     )
 
 

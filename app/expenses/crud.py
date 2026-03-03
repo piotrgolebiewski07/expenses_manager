@@ -1,6 +1,10 @@
 import csv
 from datetime import date, datetime, time
 import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -274,48 +278,156 @@ def generate_report(
         end_date: date | None,
         current_user: User
 ):
-    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+    query = (
+        db.query(Expense)
+        .options(joinedload(Expense.category))
+        .filter(Expense.user_id == current_user.id)
+    )
 
-    # Filtr: kategoria
     if category:
-        query = query.join(Category)
-        query = query.filter(Category.name == category)
+        query = query.join(Category).filter(Category.name == category)
 
-    # Filtr: data początkowa
     if start_date:
-        query = query.filter(Expense.created_at >= start_date)
+        start_dt = datetime.combine(start_date, time.min)
+        query = query.filter(Expense.created_at >= start_dt)
 
-    # Filtr: data końcowa
     if end_date:
-        query = query.filter(Expense.created_at <= end_date)
+        end_dt = datetime.combine(end_date, time.max)
+        query = query.filter(Expense.created_at <= end_dt)
 
-    try:
-        expenses = query.all()
-    except SQLAlchemyError as e:
-        raise DatabaseException(str(e))
+    expenses = query.order_by(Expense.created_at.asc()).all()
 
     if not expenses:
         raise NoExpensesFoundException()
 
-    # Tworzenie CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Name", "Category", "Price", "Created At"])
+    wb = Workbook()
+
+    # =========================
+    # SHEET 1 — DATA
+    # =========================
+    ws_data = wb.active
+    ws_data.title = "Data"
+
+    headers = ["ID", "Name", "Category", "Price", "Created At"]
+    ws_data.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        ws_data.cell(row=1, column=col).font = Font(bold=True)
 
     for exp in expenses:
-        writer.writerow([
+        ws_data.append([
             exp.id,
             exp.name,
-            exp.category.name,
+            exp.category.name if exp.category else None,
             exp.price,
-            exp.created_at.isoformat() if exp.created_at else None
+            exp.created_at
         ])
 
+    ws_data.column_dimensions["A"].width = 8
+    ws_data.column_dimensions["B"].width = 22
+    ws_data.column_dimensions["C"].width = 18
+    ws_data.column_dimensions["D"].width = 14
+    ws_data.column_dimensions["E"].width = 20
+
+    for row in ws_data.iter_rows(min_row=2, min_col=4, max_col=4):
+        for cell in row:
+            cell.number_format = "#,##0.00"
+
+    # =========================
+    # SHEET 2 — SUMMARY
+    # =========================
+    ws_summary = wb.create_sheet("Summary")
+
+    # Nagłówek
+    ws_summary["A1"] = "EXPENSE REPORT SUMMARY"
+    ws_summary.merge_cells("A1:B1")
+    ws_summary["A1"].font = Font(size=16, bold=True)
+    ws_summary["A1"].alignment = Alignment(horizontal="center")
+    ws_summary["A1"].fill = PatternFill(
+        start_color="DDDDDD",
+        end_color="DDDDDD",
+        fill_type="solid"
+    )
+
+    # Okres raportu
+    period_text = f"Period: {start_date or '---'} - {end_date or '---'}"
+    ws_summary["A2"] = period_text
+    ws_summary.merge_cells("A2:B2")
+    ws_summary["A2"].alignment = Alignment(horizontal="center")
+
+    # Podstawowe statystyki
+    total = sum(exp.price for exp in expenses)
+    count = len(expenses)
+    average = total / count if count else 0
+    max_value = max(exp.price for exp in expenses)
+
+    summary_rows = [
+        ("Total", total),
+        ("Average", average),
+        ("Max", max_value),
+        ("Count", count),
+    ]
+
+    for idx, (label, value) in enumerate(summary_rows, start=4):
+        ws_summary[f"A{idx}"] = label
+        ws_summary[f"B{idx}"] = value
+        ws_summary[f"A{idx}"].font = Font(bold=True)
+
+    # Format waluty (Total, Average, Max)
+    for row in ws_summary.iter_rows(min_row=4, max_row=6, min_col=2, max_col=2):
+        for cell in row:
+            cell.number_format = "#,##0.00"
+
+    # Ramki dla summary
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for row in ws_summary.iter_rows(min_row=4, max_row=7, min_col=1, max_col=2):
+        for cell in row:
+            cell.border = border
+
+    # Sekcja kategorii
+    ws_summary["A9"] = "By Category"
+    ws_summary["A9"].font = Font(size=12, bold=True)
+
+    category_totals = {}
+    for exp in expenses:
+        name = exp.category.name
+        category_totals[name] = category_totals.get(name, 0) + exp.price
+
+    # Sortowanie malejąco
+    sorted_categories = sorted(
+        category_totals.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    row_start = 11
+
+    for idx, (cat, value) in enumerate(sorted_categories):
+        ws_summary[f"A{row_start + idx}"] = cat
+        ws_summary[f"B{row_start + idx}"] = value
+        ws_summary[f"B{row_start + idx}"].number_format = "#,##0.00"
+
+        # Wyróżnienie największej kategorii
+        if idx == 0:
+            ws_summary[f"A{row_start + idx}"].font = Font(bold=True)
+            ws_summary[f"B{row_start + idx}"].font = Font(bold=True)
+
+        ws_summary[f"A{row_start + idx}"].border = border
+        ws_summary[f"B{row_start + idx}"].border = border
+
+    ws_summary.column_dimensions["A"].width = 22
+    ws_summary.column_dimensions["B"].width = 16
+
+    output = io.BytesIO()
+    wb.save(output)
     output.seek(0)
+
     return output
 
 
-def create_user(db, user: UserCreate):
+def create_user(db: Session, user: UserCreate):
     existing_user = db.query(User).filter(User.email == user.email).first()
 
     if existing_user:
@@ -336,5 +448,5 @@ def create_user(db, user: UserCreate):
 
 
 def get_user_by_email(db: Session, email: str):
-    user = db.query(User).filter(User.email == email).first()
-    return user
+    return db.query(User).filter(User.email == email).first()
+
