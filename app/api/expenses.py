@@ -69,29 +69,52 @@ def read_all_expenses_endpoint(
 
 
 @router.post("/", response_model=ExpenseDTO, status_code=status.HTTP_201_CREATED)
-def create_expense_endpoint(dto: ExpenseCreateDTO, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def create_expense_endpoint(
+        dto: ExpenseCreateDTO,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
     return create_expense(db, dto, current_user)
 
 
 @router.put("/{expense_id}", response_model=ExpenseDTO, status_code=status.HTTP_200_OK)
-def update_expenses_endpoint(expense_id: int, dto: ExpenseUpdateDTO, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_expenses_endpoint(
+        expense_id: int,
+        dto: ExpenseUpdateDTO,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
     return update_expense(db, expense_id, dto, current_user)
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_expense_endpoint(expense_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def delete_expense_endpoint(
+        expense_id: int,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
     delete_expense(db, expense_id, current_user)
     return None
 
 
 @router.get("/statistics/{year}/{month}", status_code=status.HTTP_200_OK)
-def get_statistics(year: int, month: int, db: Session = Depends(get_session),current_user: User = Depends(get_current_user)):
+def get_statistics(
+        year: int,
+        month: int,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
     return statistics(db, year, month, current_user)
 
 
-@router.get("/visualization/{month}", status_code=status.HTTP_200_OK)
-def get_visualization_endpoint(month: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
-    image_stream = generate_visualization(db, month, current_user)
+@router.get("/visualization/{year}/{month}", status_code=status.HTTP_200_OK)
+def get_visualization_endpoint(
+        year: int,
+        month: int,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
+    image_stream = generate_visualization(db, year, month, current_user)
     return StreamingResponse(image_stream, media_type='image/png')
 
 
@@ -112,6 +135,10 @@ def generate_report_endpoint(
 
 
 @router.get("/{expense_id}", response_model=ExpenseDTO, status_code=status.HTTP_200_OK)
-def read_expenses_by_id_endpoint(expense_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def read_expenses_by_id_endpoint(
+        expense_id: int,
+        db: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
     return get_expense_by_id(db, expense_id, current_user)
 

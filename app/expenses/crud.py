@@ -179,8 +179,8 @@ def statistics(db: Session, year:int, month: int, current_user: User):
     )
 
     by_category = [
-        {"category": name, "total": total or 0}
-        for name, total in category_stats
+        {"category": name, "total": category_total or 0}
+        for name, category_total in category_stats
     ]
 
     return {
@@ -196,6 +196,7 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import numpy as np
 
     if month < 1 or month > 12:
         raise InvalidMonthException()
@@ -203,7 +204,6 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
     if year < 2000 or year > 2100:
         raise InvalidYearException()
 
-    # Pobranie danych
     expenses = (db.query(Expense)
                 .options(joinedload(Expense.category))
                 .filter(
@@ -212,13 +212,12 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
                     Expense.user_id == current_user.id
                 )
                 .all()
-            )
+                )
 
-    # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
         raise NoExpensesFoundException()
 
-    # Grupowanie wydatków według kategorii
+    # Grupowanie
     categories = {}
     for expense in expenses:
         name = expense.category.name
@@ -227,14 +226,41 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
     # Przygotowanie danych do wykresu
     labels = list(categories.keys())
     values = list(categories.values())
+    total_sum = sum(values)
 
-    # Tworzenie wykresu kołowego
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+    # Wyróżnienie największej kategorii
+    max_index = values.index(max(values))
+    explode = [0.08 if i == max_index else 0 for i in range(len(values))]
 
-    # Zapisanie wykresu do pamięci
+    # Kolorystyka
+    cmap = plt.get_cmap("tab20")
+    colors = cmap(np.linspace(0, 1, len(labels)))
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    ax.pie(
+        values,
+        labels=labels,
+        autopct=lambda pct: f"{pct:.1f}%\n({int(pct / 100. * total_sum)})",
+        startangle=90,
+        explode=explode,
+        colors=colors,
+        wedgeprops={"width": 0.4, "edgecolor": "white", "linewidth": 1.2},
+        textprops={"fontsize": 10}
+    )
+
+    # Tytuł
+    ax.set_title(
+        f"Expenses distribution\n{month:02}/{year}",
+        fontsize=14,
+        weight="bold"
+    )
+
+    # Równe proporcje koła
+    ax.axis("equal")
+
     image_stream = io.BytesIO()
-    fig.savefig(image_stream, format="png")  # Zapis do obiektu Bytes IO
+    fig.savefig(image_stream, format="png", bbox_inches="tight", dpi=150)
     plt.close(fig)
     image_stream.seek(0)
 
