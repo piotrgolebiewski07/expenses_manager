@@ -1,6 +1,10 @@
 import csv
 from datetime import date, datetime, time
 import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,6 +15,7 @@ from app.core.exception import (
     DatabaseException,
     ExpenseNotFoundException,
     InvalidMonthException,
+    InvalidYearException,
     NoExpensesFoundException,
     UserAlreadyExistsException,
 )
@@ -46,7 +51,7 @@ def get_all_expenses(db: Session,
 
     if end_date is not None:
         end_dt = datetime.combine(end_date, time.max)
-        query = query.filter(Expense.created_at <= end_date)
+        query = query.filter(Expense.created_at <= end_dt)
 
     if category_name is not None:
         query = query.join(Category).filter(Category.name == category_name)
@@ -63,7 +68,7 @@ def get_all_expenses(db: Session,
         "created_at": Expense.created_at
     }
 
-    column = columns[sort_by]
+    column = columns.get(sort_by, Expense.created_at)
 
     if order == "desc":
         query = query.order_by(column.desc(), Expense.id.desc())
@@ -145,7 +150,7 @@ def statistics(db: Session, year:int, month: int, current_user: User):
         raise InvalidMonthException()
 
     if year < 2000 or year > 2100:
-        raise ValueError("Invalid year")
+        raise InvalidYearException()
 
     result = db.query(
         func.sum(Expense.price),
@@ -177,7 +182,10 @@ def statistics(db: Session, year:int, month: int, current_user: User):
         .all()
     )
 
-    by_category = [{"category": name, "total": total or 0} for name, total in category_stats]
+    by_category = [
+        {"category": name, "total": category_total or 0}
+        for name, category_total in category_stats
+    ]
 
     return {
         "total": total,
@@ -188,40 +196,75 @@ def statistics(db: Session, year:int, month: int, current_user: User):
     }
 
 
-def generate_visualization(db: Session, month: int, current_user: User):
+def generate_visualization(db: Session, year: int, month: int, current_user: User):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import numpy as np
 
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
-    # Pobranie danych
+    if year < 2000 or year > 2100:
+        raise InvalidYearException()
+
     expenses = (db.query(Expense)
                 .options(joinedload(Expense.category))
-                .filter(func.strftime("%m", Expense.created_at) == f"{month:02}",
-                        Expense.user_id == current_user.id).all())
+                .filter(
+            func.strftime("%m", Expense.created_at) == f"{month:02}",
+                    func.strftime("%Y", Expense.created_at) == str(year),
+                    Expense.user_id == current_user.id
+                )
+                .all()
+                )
 
-    # Jeśi nie ma wydatków w danym miesiącu - zgłoś błąd logiczny(nie HTTP)
     if not expenses:
         raise NoExpensesFoundException()
 
-    # Grupowanie wydatków według kategorii
+    # Grupowanie
     categories = {}
     for expense in expenses:
-        categories[expense.category.name] = categories.get(expense.category.name, 0) + expense.price
+        name = expense.category.name
+        categories[name] = categories.get(name, 0) + expense.price
 
     # Przygotowanie danych do wykresu
     labels = list(categories.keys())
     values = list(categories.values())
+    total_sum = sum(values)
 
-    # Tworzenie wykresu kołowego
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+    # Wyróżnienie największej kategorii
+    max_index = values.index(max(values))
+    explode = [0.08 if i == max_index else 0 for i in range(len(values))]
 
-    # Zapisanie wykresu do pamięci
+    # Kolorystyka
+    cmap = plt.get_cmap("tab20")
+    colors = cmap(np.linspace(0, 1, len(labels)))
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    ax.pie(
+        values,
+        labels=labels,
+        autopct=lambda pct: f"{pct:.1f}%\n({int(pct / 100. * total_sum)})",
+        startangle=90,
+        explode=explode,
+        colors=colors,
+        wedgeprops={"width": 0.4, "edgecolor": "white", "linewidth": 1.2},
+        textprops={"fontsize": 10}
+    )
+
+    # Tytuł
+    ax.set_title(
+        f"Expenses distribution\n{month:02}/{year}",
+        fontsize=14,
+        weight="bold"
+    )
+
+    # Równe proporcje koła
+    ax.axis("equal")
+
     image_stream = io.BytesIO()
-    fig.savefig(image_stream, format="png")  # Zapis do obiektu Bytes IO
+    fig.savefig(image_stream, format="png", bbox_inches="tight", dpi=150)
     plt.close(fig)
     image_stream.seek(0)
 
@@ -235,48 +278,156 @@ def generate_report(
         end_date: date | None,
         current_user: User
 ):
-    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+    query = (
+        db.query(Expense)
+        .options(joinedload(Expense.category))
+        .filter(Expense.user_id == current_user.id)
+    )
 
-    # Filtr: kategoria
     if category:
-        query = query.join(Category)
-        query = query.filter(Category.name == category)
+        query = query.join(Category).filter(Category.name == category)
 
-    # Filtr: data początkowa
     if start_date:
-        query = query.filter(Expense.created_at >= start_date)
+        start_dt = datetime.combine(start_date, time.min)
+        query = query.filter(Expense.created_at >= start_dt)
 
-    # Filtr: data końcowa
     if end_date:
-        query = query.filter(Expense.created_at <= end_date)
+        end_dt = datetime.combine(end_date, time.max)
+        query = query.filter(Expense.created_at <= end_dt)
 
-    try:
-        expenses = query.all()
-    except SQLAlchemyError as e:
-        raise DatabaseException(str(e))
+    expenses = query.order_by(Expense.created_at.asc()).all()
 
     if not expenses:
         raise NoExpensesFoundException()
 
-    # Tworzenie CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Name", "Category", "Price", "Created At"])
+    wb = Workbook()
+
+    # =========================
+    # SHEET 1 — DATA
+    # =========================
+    ws_data = wb.active
+    ws_data.title = "Data"
+
+    headers = ["ID", "Name", "Category", "Price", "Created At"]
+    ws_data.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        ws_data.cell(row=1, column=col).font = Font(bold=True)
 
     for exp in expenses:
-        writer.writerow([
+        ws_data.append([
             exp.id,
             exp.name,
-            exp.category.name,
+            exp.category.name if exp.category else None,
             exp.price,
-            exp.created_at.isoformat() if exp.created_at else None
+            exp.created_at
         ])
 
+    ws_data.column_dimensions["A"].width = 8
+    ws_data.column_dimensions["B"].width = 22
+    ws_data.column_dimensions["C"].width = 18
+    ws_data.column_dimensions["D"].width = 14
+    ws_data.column_dimensions["E"].width = 20
+
+    for row in ws_data.iter_rows(min_row=2, min_col=4, max_col=4):
+        for cell in row:
+            cell.number_format = "#,##0.00"
+
+    # =========================
+    # SHEET 2 — SUMMARY
+    # =========================
+    ws_summary = wb.create_sheet("Summary")
+
+    # Nagłówek
+    ws_summary["A1"] = "EXPENSE REPORT SUMMARY"
+    ws_summary.merge_cells("A1:B1")
+    ws_summary["A1"].font = Font(size=16, bold=True)
+    ws_summary["A1"].alignment = Alignment(horizontal="center")
+    ws_summary["A1"].fill = PatternFill(
+        start_color="DDDDDD",
+        end_color="DDDDDD",
+        fill_type="solid"
+    )
+
+    # Okres raportu
+    period_text = f"Period: {start_date or '---'} - {end_date or '---'}"
+    ws_summary["A2"] = period_text
+    ws_summary.merge_cells("A2:B2")
+    ws_summary["A2"].alignment = Alignment(horizontal="center")
+
+    # Podstawowe statystyki
+    total = sum(exp.price for exp in expenses)
+    count = len(expenses)
+    average = total / count if count else 0
+    max_value = max(exp.price for exp in expenses)
+
+    summary_rows = [
+        ("Total", total),
+        ("Average", average),
+        ("Max", max_value),
+        ("Count", count),
+    ]
+
+    for idx, (label, value) in enumerate(summary_rows, start=4):
+        ws_summary[f"A{idx}"] = label
+        ws_summary[f"B{idx}"] = value
+        ws_summary[f"A{idx}"].font = Font(bold=True)
+
+    # Format waluty (Total, Average, Max)
+    for row in ws_summary.iter_rows(min_row=4, max_row=6, min_col=2, max_col=2):
+        for cell in row:
+            cell.number_format = "#,##0.00"
+
+    # Ramki dla summary
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for row in ws_summary.iter_rows(min_row=4, max_row=7, min_col=1, max_col=2):
+        for cell in row:
+            cell.border = border
+
+    # Sekcja kategorii
+    ws_summary["A9"] = "By Category"
+    ws_summary["A9"].font = Font(size=12, bold=True)
+
+    category_totals = {}
+    for exp in expenses:
+        name = exp.category.name
+        category_totals[name] = category_totals.get(name, 0) + exp.price
+
+    # Sortowanie malejąco
+    sorted_categories = sorted(
+        category_totals.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    row_start = 11
+
+    for idx, (cat, value) in enumerate(sorted_categories):
+        ws_summary[f"A{row_start + idx}"] = cat
+        ws_summary[f"B{row_start + idx}"] = value
+        ws_summary[f"B{row_start + idx}"].number_format = "#,##0.00"
+
+        # Wyróżnienie największej kategorii
+        if idx == 0:
+            ws_summary[f"A{row_start + idx}"].font = Font(bold=True)
+            ws_summary[f"B{row_start + idx}"].font = Font(bold=True)
+
+        ws_summary[f"A{row_start + idx}"].border = border
+        ws_summary[f"B{row_start + idx}"].border = border
+
+    ws_summary.column_dimensions["A"].width = 22
+    ws_summary.column_dimensions["B"].width = 16
+
+    output = io.BytesIO()
+    wb.save(output)
     output.seek(0)
+
     return output
 
 
-def create_user(db, user: UserCreate):
+def create_user(db: Session, user: UserCreate):
     existing_user = db.query(User).filter(User.email == user.email).first()
 
     if existing_user:
@@ -297,5 +448,5 @@ def create_user(db, user: UserCreate):
 
 
 def get_user_by_email(db: Session, email: str):
-    user = db.query(User).filter(User.email == email).first()
-    return user
+    return db.query(User).filter(User.email == email).first()
+

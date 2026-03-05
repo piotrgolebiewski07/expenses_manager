@@ -9,3 +9,4 @@ python-dotenv==1.2.1
 matplotlib==3.10.7
 starlette~=0.41.3
 bcrypt==3.2.2
+numpy
