@@ -71,3 +71,20 @@ def test_user(db):
 
     return user
 
+
+@pytest.fixture
+def auth_headers(client, test_user):
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "test@example.com",
+            "password": "Aaaaaa12"
+        }
+    )
+
+    token = response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
