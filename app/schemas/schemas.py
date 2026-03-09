@@ -1,15 +1,14 @@
 from datetime import datetime
 import re
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict, Field
 
 
 class CategoryNestedDTO(BaseModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExpenseCreateDTO(BaseModel):
@@ -31,8 +30,7 @@ class ExpenseDTO(BaseModel):
     created_at: datetime
     category: CategoryNestedDTO
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedExpenseDTO(BaseModel):
@@ -44,13 +42,13 @@ class PaginatedExpenseDTO(BaseModel):
 
 class UserCreate(BaseModel):
     email: EmailStr = Field(
-        example="user@example.com"
+        json_schema_extra={"example": "user@example.com"}
     )
     password: str = Field(
-        example="111111Aa"
+        json_schema_extra={"example": "111111Aa"}
     )
 
-    @field_validator("password")  # type: ignore[misc]
+    @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:
         if len(value) < 8:
@@ -66,16 +64,15 @@ class UserDTO(BaseModel):
     id: int
     email: EmailStr
 
-    class Config:
-        from_attributes = True  # Pydantic x2
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr = Field(
-        example="seed@example.com"
+        json_schema_extra={"example": "seed@example.com"}
     )
     password: str = Field(
-        example="111111Aa"
+        json_schema_extra={"example": "111111Aa"}
     )
 
 
