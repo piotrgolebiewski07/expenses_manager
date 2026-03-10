@@ -11,9 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.db.session import get_session
-from app.models import Base
-
-
+from app.models import Base, Category, Expense
 
 
 engine = create_engine(
@@ -87,4 +85,35 @@ def auth_headers(client, test_user):
     return {
         "Authorization": f"Bearer {token}"
     }
+
+
+@pytest.fixture
+def test_category(db):
+    category = Category(
+        name="Food"
+    )
+
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+
+    return category
+
+
+@pytest.fixture
+def test_expense(db, test_category, test_user):
+    expense = Expense(
+            name="coffee",
+            category_id=test_category.id,
+            price=10,
+            user_id=test_user.id
+        )
+
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+
+    return expense
+
+
 
