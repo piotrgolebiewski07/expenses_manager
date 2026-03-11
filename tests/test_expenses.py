@@ -137,7 +137,6 @@ class TestExpenseCreate:
         assert "errors" in data
 
 
-
 # -----------------------
 # Read
 # -----------------------
