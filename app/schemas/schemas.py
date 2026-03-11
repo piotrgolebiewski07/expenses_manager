@@ -11,6 +11,10 @@ class CategoryNestedDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CategoryCreateDTO(BaseModel):
+    name: str
+
+
 class ExpenseCreateDTO(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     category_id: int

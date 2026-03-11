@@ -20,6 +20,7 @@ from app.core.exception import (ExpenseNotFoundException,
                                 CategoryNotFoundException,
                                 UserAlreadyExistsException
                                 )
+from app.api.categories import router as categories_router
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -141,4 +142,5 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 app.include_router(expenses_router)
 app.include_router(auth_router)
+app.include_router(categories_router)
 
