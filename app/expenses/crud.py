@@ -1,18 +1,13 @@
-import csv
 from datetime import date, datetime, time
 import io
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
-from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exception import (
     CategoryNotFoundException,
-    DatabaseException,
     ExpenseNotFoundException,
     InvalidMonthException,
     InvalidYearException,
@@ -145,7 +140,8 @@ def delete_expense(db: Session, expense_id: int, current_user: User):
     return expense
 
 
-def statistics(db: Session, year:int, month: int, current_user: User):
+def statistics(db: Session, year: int, month: int, current_user: User):
+    print("STATISTICS CALLED")
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
@@ -211,10 +207,10 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
     expenses = (db.query(Expense)
                 .options(joinedload(Expense.category))
                 .filter(
-            func.strftime("%m", Expense.created_at) == f"{month:02}",
-                    func.strftime("%Y", Expense.created_at) == str(year),
-                    Expense.user_id == current_user.id
-                )
+        func.strftime("%m", Expense.created_at) == f"{month:02}",
+        func.strftime("%Y", Expense.created_at) == str(year),
+        Expense.user_id == current_user.id
+    )
                 .all()
                 )
 
@@ -449,4 +445,3 @@ def create_user(db: Session, user: UserCreate):
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
-

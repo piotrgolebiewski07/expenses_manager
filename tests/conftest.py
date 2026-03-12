@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -89,9 +90,7 @@ def auth_headers(client, test_user):
 
 @pytest.fixture
 def test_category(db):
-    category = Category(
-        name="Food"
-    )
+    category = Category(name="Food")
 
     db.add(category)
     db.commit()
@@ -116,4 +115,35 @@ def test_expense(db, test_category, test_user):
     return expense
 
 
+@pytest.fixture
+def test_expenses(db, test_category, test_user):
+    expense1 = Expense(
+            name="fruits",
+            category_id=test_category.id,
+            price=100,
+            user_id=test_user.id,
+            created_at=datetime(2025, 5, 10)
+        )
+    expense2 = Expense(
+        name="vegetables",
+        category_id=test_category.id,
+        price=200,
+        user_id=test_user.id,
+        created_at=datetime(2025, 5, 10)
+    )
+
+    db.add_all([expense1, expense2])
+    db.commit()
+
+    return expense1, expense2
+
+
+@pytest.fixture
+def year():
+    return 2025
+
+
+@pytest.fixture
+def month():
+    return 5
 
