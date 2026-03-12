@@ -141,7 +141,6 @@ def delete_expense(db: Session, expense_id: int, current_user: User):
 
 
 def statistics(db: Session, year: int, month: int, current_user: User):
-    print("STATISTICS CALLED")
     if month < 1 or month > 12:
         raise InvalidMonthException()
 
