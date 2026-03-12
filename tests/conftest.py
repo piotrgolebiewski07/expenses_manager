@@ -118,11 +118,11 @@ def test_expense(db, test_category, test_user):
 @pytest.fixture
 def test_expenses(db, test_category, test_user):
     expense1 = Expense(
-            name="fruits",
-            category_id=test_category.id,
-            price=100,
-            user_id=test_user.id,
-            created_at=datetime(2025, 5, 10)
+        name="fruits",
+        category_id=test_category.id,
+        price=100,
+        user_id=test_user.id,
+        created_at=datetime(2025, 5, 10)
         )
     expense2 = Expense(
         name="vegetables",
