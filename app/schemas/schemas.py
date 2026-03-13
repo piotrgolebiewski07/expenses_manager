@@ -1,27 +1,46 @@
 from datetime import datetime
 import re
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict, Field
 
 
 class CategoryNestedDTO(BaseModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryCreateDTO(BaseModel):
+    name: str
 
 
 class ExpenseCreateDTO(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     category_id: int
-    price: int
+    price: int = Field(gt=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Name cannot be empty")
+        return value
 
 
 class ExpenseUpdateDTO(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     category_id: int | None = None
-    price: int | None = None
+    price: int | None = Field(default=None, gt=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not value.strip():
+            raise ValueError("Name cannot be empty")
+        return value
 
 
 class ExpenseDTO(BaseModel):
@@ -31,8 +50,7 @@ class ExpenseDTO(BaseModel):
     created_at: datetime
     category: CategoryNestedDTO
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedExpenseDTO(BaseModel):
@@ -44,13 +62,13 @@ class PaginatedExpenseDTO(BaseModel):
 
 class UserCreate(BaseModel):
     email: EmailStr = Field(
-        example="user@example.com"
+        json_schema_extra={"example": "user@example.com"}
     )
     password: str = Field(
-        example="111111Aa"
+        json_schema_extra={"example": "111111Aa"}
     )
 
-    @field_validator("password")  # type: ignore[misc]
+    @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:
         if len(value) < 8:
@@ -66,16 +84,15 @@ class UserDTO(BaseModel):
     id: int
     email: EmailStr
 
-    class Config:
-        from_attributes = True  # Pydantic x2
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginRequest(BaseModel):
     email: EmailStr = Field(
-        example="seed@example.com"
+        json_schema_extra={"example": "seed@example.com"}
     )
     password: str = Field(
-        example="111111Aa"
+        json_schema_extra={"example": "111111Aa"}
     )
 
 

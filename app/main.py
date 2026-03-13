@@ -17,9 +17,11 @@ from app.core.exception import (ExpenseNotFoundException,
                                 NoExpensesFoundException,
                                 DatabaseException,
                                 InvalidMonthException,
+                                InvalidYearException,
                                 CategoryNotFoundException,
                                 UserAlreadyExistsException
                                 )
+from app.api.categories import router as categories_router
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -81,7 +83,14 @@ async def invalid_month_handler(request: Request, exc: InvalidMonthException):
     return JSONResponse(
         status_code=400,
         content={"detail": "Month must be between 1 and 12"}
+    )
 
+
+@app.exception_handler(InvalidYearException)
+async def invalid_year_handler(request: Request, exc: InvalidYearException):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Year must be between 2000 and 2100"}
     )
 
 
@@ -141,4 +150,5 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 app.include_router(expenses_router)
 app.include_router(auth_router)
+app.include_router(categories_router)
 

@@ -31,8 +31,14 @@ def read_all_expenses_endpoint(
         order: Literal["asc", "desc"] = "desc",
         min_price: int | None = Query(None, ge=0),
         max_price: int | None = Query(None, ge=0),
-        start_date: date | None = Query(None, description="Start date in format YYYY-MM-DD", example="2025-01-01"),
-        end_date: date | None = Query(None, description="End date in format YYYY-MM-DD", example="2025-12-31"),
+        start_date: date | None = Query(
+            None,
+            description="Start date in format YYYY-MM-DD",
+            json_schema_extra={"example": "2025-01-01"}),
+        end_date: date | None = Query(
+            None,
+            description="End date in format YYYY-MM-DD",
+            json_schema_extra={"example": "2025-12-31"}),
         category_id: int | None = Query(None, ge=1),
         category_name: str | None = Query(None, min_length=1),
         db: Session = Depends(get_session),
