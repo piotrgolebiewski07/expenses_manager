@@ -16,16 +16,37 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     "/register",
     response_model=UserDTO,
     status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+    description="Create a new user account.",
     responses={
         409: {"description": "User already exists"}
     }
 )
 def register(user: UserCreate, db: Session = Depends(get_session)):
+    """
+    Register a new user.
+
+    The email must be unique.
+
+    Returns the created user.
+    """
     return create_user(db, user)
 
 
-@router.post("/login", response_model=Token)
+@router.post(
+    "/login",
+    response_model=Token,
+    summary="Authenticate user",
+    description="Authenticate user with email and password and return a JWT access token."
+)
 def login(data: LoginRequest, db: Session = Depends(get_session)):
+    """
+    Authenticate a user and return an access token.
+
+    Returns:
+    - access_token
+    - token_type
+    """
     user = get_user_by_email(db, data.email)
 
     if not user:
@@ -48,7 +69,15 @@ def login(data: LoginRequest, db: Session = Depends(get_session)):
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserDTO)
+@router.get(
+    "/me",
+    response_model=UserDTO,
+    summary="Get current user",
+    description="Retrieve information about the currently authenticated user."
+)
 def read_me(current_user: User = Depends(get_current_user)):
+    """
+    Return information about the authenticated user.
+    """
     return {"id": current_user.id, "email": current_user.email}
 
