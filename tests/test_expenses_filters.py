@@ -60,5 +60,38 @@ class TestExpensesFilters:
         assert len(items) >= 1
 
         for item in items:
-            assert item["created_at"] >= "2025-05-01"
+            assert item["created_at"].startswith("2025-05")
 
+
+# -----------------------
+# Pagination
+# -----------------------
+class TestExpensesPagination:
+
+    def test_pagination_limit(self, client, auth_headers, test_expenses):
+        response = client.get(
+            "/expenses?limit=1",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+        items = data["items"]
+
+        assert len(items) == 1
+        assert data["limit"] == 1
+
+    def test_pagination_offset(self, client, auth_headers, test_expenses):
+        response = client.get(
+            "/expenses?offset=1",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+        items = data["items"]
+
+        assert len(items) == 1
+        assert data["offset"] == 1
