@@ -30,7 +30,6 @@ load_dotenv(BASE_DIR / ".env")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    Base.metadata.create_all(bind=engine)
     print("Starting app ...")
     yield
     print("Closing database connections ...")
