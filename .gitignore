@@ -14,11 +14,24 @@ env/
 
 # Environment variables
 .env
+.env.*
 
-# IDE (PyCharm / VSCode)
+# IDE
 .idea/
 .vscode/
 
-# Test / type cache
+# Test cache
 .pytest_cache/
 .mypy_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS files
+.DS_Store
