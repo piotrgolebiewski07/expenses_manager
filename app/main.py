@@ -29,7 +29,9 @@ app = FastAPI(
     title="Expense Manager API",
     description="API for managing personal expenses with statistics, charts and export features.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs"
 )
 
 
