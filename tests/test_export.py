@@ -5,14 +5,14 @@ class TestExportAuthorization:
 
     def test_export_without_token(self, client):
         response = client.get(
-            f"/expenses/export/"
+            "/api/v1/expenses/export/"
         )
 
         assert response.status_code == 403
 
     def test_export_authorized(self, client, auth_headers, test_expenses):
         response = client.get(
-            f"/expenses/export/",
+            "/api/v1/expenses/export/",
             headers=auth_headers
         )
 
@@ -26,7 +26,7 @@ class TestExportResponse:
 
     def test_export_returns_excel_file(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses/export/",
+            "/api/v1/expenses/export/",
             headers=auth_headers
         )
 
@@ -36,7 +36,7 @@ class TestExportResponse:
 
     def test_export_no_expenses(self, client, auth_headers):
         response = client.get(
-            "/expenses/export/",
+            "/api/v1/expenses/export/",
             headers=auth_headers
         )
 

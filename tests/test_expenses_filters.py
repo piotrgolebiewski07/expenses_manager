@@ -5,7 +5,7 @@ class TestExpensesFilters:
 
     def test_filter_by_min_price(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses?min_price=150",
+            "/api/v1/expenses?min_price=150",
             headers=auth_headers
         )
 
@@ -19,7 +19,7 @@ class TestExpensesFilters:
 
     def test_filter_by_max_price(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses?max_price=150",
+            "/api/v1/expenses?max_price=150",
             headers=auth_headers
         )
 
@@ -33,7 +33,7 @@ class TestExpensesFilters:
 
     def test_filter_by_category_name(self, client, auth_headers, test_expenses, test_category):
         response = client.get(
-            f"/expenses?category_name={test_category.name}",
+            f"/api/v1/expenses?category_name={test_category.name}",
             headers=auth_headers
         )
 
@@ -48,7 +48,7 @@ class TestExpensesFilters:
 
     def test_filter_by_start_date(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses?start_date=2025-05-01",
+            "/api/v1/expenses?start_date=2025-05-01",
             headers=auth_headers
         )
 
@@ -70,7 +70,7 @@ class TestExpensesPagination:
 
     def test_pagination_limit(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses?limit=1",
+            "/api/v1/expenses?limit=1",
             headers=auth_headers
         )
 
@@ -84,7 +84,7 @@ class TestExpensesPagination:
 
     def test_pagination_offset(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses?offset=1",
+            "/api/v1/expenses?offset=1",
             headers=auth_headers
         )
 

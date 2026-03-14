@@ -4,7 +4,7 @@
 class TestUserRegister:
     def test_create_user_success(self, client):
         response = client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "new_user@example.com",
                 "password": "Aaaaaa12"
@@ -19,7 +19,7 @@ class TestUserRegister:
 
     def test_create_user_duplicate_email(self, client, test_user):
         response = client.post(
-            "/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "Aaaaaa12"

@@ -8,14 +8,14 @@ class TestStatisticsAuthorization:
 
     def test_get_statistics_without_token(self, client, year, month):
         response = client.get(
-            f"/expenses/statistics/{year}/{month}",
+            f"/api/v1/expenses/statistics/{year}/{month}",
         )
 
         assert response.status_code == 403
 
     def test_get_statistics_authorized(self, client, auth_headers, year, month):
         response = client.get(
-            f"/expenses/statistics/{year}/{month}",
+            f"/api/v1/expenses/statistics/{year}/{month}",
             headers=auth_headers
         )
 
@@ -29,7 +29,7 @@ class TestStatisticsRead:
 
     def test_get_statistics_returns_correct_structure(self, client, auth_headers, year, month):
         response = client.get(
-            f"/expenses/statistics/{year}/{month}",
+            f"/api/v1/expenses/statistics/{year}/{month}",
             headers=auth_headers
         )
 
@@ -51,7 +51,7 @@ class TestStatisticsRead:
 
     def test_get_statistics_empty_month(self, client, auth_headers, month):
         response = client.get(
-            f"/expenses/statistics/2099/{month}",
+            f"/api/v1/expenses/statistics/2099/{month}",
             headers=auth_headers
         )
 
@@ -66,7 +66,7 @@ class TestStatisticsRead:
 
     def test_get_statistics_correct_calculations(self, client, auth_headers, test_expenses):
         response = client.get(
-            "/expenses/statistics/2025/5",
+            "/api/v1/expenses/statistics/2025/5",
             headers=auth_headers
         )
 
@@ -96,7 +96,7 @@ class TestStatisticsValidation:
     )
     def test_get_statistics_invalid_params(self, client, auth_headers, year, month):
         response = client.get(
-            f"/expenses/statistics/{year}/{month}",
+            f"/api/v1/expenses/statistics/{year}/{month}",
             headers=auth_headers
         )
 
@@ -109,7 +109,7 @@ class TestStatisticsValidation:
 class TestStatisticsSecurity:
 
     def test_get_statistics_only_current_user_data(self, client, auth_headers, db, test_category):
-        from app.models import User, Expense
+        from app.models.models import User, Expense
         from app.core.security import hash_password
         from datetime import datetime
 
@@ -133,7 +133,7 @@ class TestStatisticsSecurity:
         db.commit()
 
         response = client.get(
-            "/expenses/statistics/2025/5",
+            "/api/v1/expenses/statistics/2025/5",
             headers=auth_headers
         )
 

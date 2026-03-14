@@ -4,7 +4,7 @@
 class TestCategoryAuthorization:
     def test_get_categories_without_token(self, client):
         response = client.get(
-            "/categories/"
+            "/api/v1/categories/"
         )
 
         assert response.status_code == 403
@@ -20,7 +20,7 @@ class TestCategoryRead:
 
     def test_get_categories_authorized(self, client, auth_headers):
         response = client.get(
-            "/categories/",
+            "/api/v1/categories/",
             headers=auth_headers
         )
 
@@ -37,7 +37,7 @@ class TestCategoryCreate:
 
     def test_create_category(self, client, auth_headers):
         response = client.post(
-            "/categories/",
+            "/api/v1/categories/",
             headers=auth_headers,
             json={
                 "name": "Transport"
@@ -51,7 +51,7 @@ class TestCategoryCreate:
 
     def test_create_category_duplicate(self, client, auth_headers, test_category):
         response = client.post(
-            "/categories/",
+            "/api/v1/categories/",
             headers=auth_headers,
             json={
                 "name": test_category.name
@@ -71,14 +71,14 @@ class TestCategoryDelete:
 
     def test_delete_category(self, client, auth_headers, test_category):
         response = client.delete(
-            f"/categories/{test_category.id}",
+            f"/api/v1/categories/{test_category.id}",
             headers=auth_headers
         )
 
         assert response.status_code == 204
 
         response = client.get(
-            "/categories/",
+            "/api/v1/categories/",
             headers=auth_headers
         )
 
@@ -90,7 +90,7 @@ class TestCategoryDelete:
 
     def test_delete_category_not_found(self, client, auth_headers):
         response = client.delete(
-            "/categories/999",
+            "/api/v1/categories/999",
             headers=auth_headers
         )
 

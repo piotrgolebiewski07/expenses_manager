@@ -4,7 +4,9 @@
 class TestExpenseAuthorization:
 
     def test_get_expenses_without_token(self, client):
-        response = client.get("/expenses/")
+        response = client.get(
+            "/api/v1/expenses/"
+        )
 
         assert response.status_code == 403
 
@@ -13,7 +15,7 @@ class TestExpenseAuthorization:
 
     def test_create_expense_without_token(self, client, test_category):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             json={
                 "name": "coffee",
                 "category_id": test_category.id,
@@ -28,7 +30,7 @@ class TestExpenseAuthorization:
 
     def test_delete_expense_without_token(self, client):
         response = client.delete(
-            "/expenses/999",
+            "/api/v1/expenses/999",
         )
 
         assert response.status_code == 403
@@ -38,7 +40,7 @@ class TestExpenseAuthorization:
 
     def test_update_expense_without_token(self, client, test_expense):
         response = client.put(
-            f"/expenses/{test_expense.id}",
+            f"/api/v1/expenses/{test_expense.id}",
             json={"price": 50}
         )
 
@@ -55,7 +57,7 @@ class TestExpenseCreate:
 
     def test_create_expense(self, client, auth_headers, test_category):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers,
             json={
                 "name": "coffee",
@@ -72,7 +74,7 @@ class TestExpenseCreate:
 
     def test_create_expense_invalid_category(self, client, auth_headers):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers,
             json={
                 "name": "coffee",
@@ -89,7 +91,7 @@ class TestExpenseCreate:
 
     def test_create_expense_invalid_price(self, client, auth_headers, test_category):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers,
             json={
                 "name": "coffee",
@@ -106,7 +108,7 @@ class TestExpenseCreate:
 
     def test_create_expense_empty_name(self, client, auth_headers, test_category):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers,
             json={
                 "name": "",
@@ -122,7 +124,7 @@ class TestExpenseCreate:
 
     def test_create_expense_name_only_spaces(self, client, auth_headers, test_category):
         response = client.post(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers,
             json={
                 "name": "   ",
@@ -144,7 +146,7 @@ class TestExpenseRead:
 
     def test_get_expenses_authorized(self, client, auth_headers):
         response = client.get(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers
         )
 
@@ -156,7 +158,7 @@ class TestExpenseRead:
 
     def test_get_expenses_contains_created_expense(self, client, auth_headers, test_expense):
         response = client.get(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers
         )
 
@@ -171,7 +173,7 @@ class TestExpenseRead:
 
     def test_get_expenses_has_pagination(self, client, auth_headers, test_expense):
         response = client.get(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers
         )
 
@@ -190,7 +192,7 @@ class TestExpenseUpdate:
 
     def test_update_expense(self, client, auth_headers, test_expense):
         response = client.put(
-            f"/expenses/{test_expense.id}",
+            f"/api/v1/expenses/{test_expense.id}",
             headers=auth_headers,
             json={
                 "price": 50
@@ -204,7 +206,7 @@ class TestExpenseUpdate:
 
     def test_update_expense_not_found(self, client, auth_headers):
         response = client.put(
-            "/expenses/999",
+            "/api/v1/expenses/999",
             headers=auth_headers,
             json={"price": 50}
         )
@@ -213,7 +215,7 @@ class TestExpenseUpdate:
 
     def test_update_expense_invalid_category(self, client, auth_headers, test_expense):
         response = client.put(
-            f"/expenses/{test_expense.id}",
+            f"/api/v1/expenses/{test_expense.id}",
             headers=auth_headers,
             json={
                 "category_id": 999
@@ -230,14 +232,14 @@ class TestExpenseDelete:
 
     def test_delete_expense(self, client, auth_headers, test_expense):
         response = client.delete(
-            f"/expenses/{test_expense.id}",
+            f"/api/v1/expenses/{test_expense.id}",
             headers=auth_headers
         )
 
         assert response.status_code == 204
 
         response = client.get(
-            "/expenses/",
+            "/api/v1/expenses/",
             headers=auth_headers
         )
 
@@ -249,7 +251,7 @@ class TestExpenseDelete:
 
     def test_delete_expense_not_found(self, client, auth_headers):
         response = client.delete(
-            "/expenses/999",
+            "/api/v1/expenses/999",
             headers=auth_headers
         )
 

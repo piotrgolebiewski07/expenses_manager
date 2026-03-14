@@ -1,18 +1,22 @@
-import sys
+# standard library
 import os
+import sys
 from datetime import datetime
 
+# add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+# third party
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+# local
 from app.main import app
 from app.db.session import get_session
-from app.models import Base, Category, Expense
+from app.models.models import Base, Category, Expense
 
 
 engine = create_engine(
@@ -56,7 +60,7 @@ def client(db):
 
 @pytest.fixture
 def test_user(db):
-    from app.models import User
+    from app.models.models import User
     from app.core.security import hash_password
 
     user = User(
@@ -74,7 +78,7 @@ def test_user(db):
 @pytest.fixture
 def auth_headers(client, test_user):
     response = client.post(
-        "/auth/login",
+        "/api/v1/auth/login",
         json={
             "email": "test@example.com",
             "password": "Aaaaaa12"
@@ -102,11 +106,11 @@ def test_category(db):
 @pytest.fixture
 def test_expense(db, test_category, test_user):
     expense = Expense(
-            name="coffee",
-            category_id=test_category.id,
-            price=10,
-            user_id=test_user.id
-        )
+        name="coffee",
+        category_id=test_category.id,
+        price=10,
+        user_id=test_user.id
+    )
 
     db.add(expense)
     db.commit()
@@ -123,7 +127,7 @@ def test_expenses(db, test_category, test_user):
         price=100,
         user_id=test_user.id,
         created_at=datetime(2025, 5, 10)
-        )
+    )
     expense2 = Expense(
         name="vegetables",
         category_id=test_category.id,
