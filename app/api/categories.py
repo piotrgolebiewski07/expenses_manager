@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+# third party
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+# local
+from app.core.security import get_current_user
 from app.db.session import get_session
 from app.models.models import Category, User
-from app.schemas.schemas import CategoryNestedDTO, CategoryCreateDTO
-from app.core.security import get_current_user
+from app.schemas.schemas import CategoryCreateDTO, CategoryNestedDTO
+
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
@@ -31,7 +34,10 @@ def get_categories(
     response_model=CategoryNestedDTO,
     status_code=status.HTTP_201_CREATED,
     summary="Create category",
-    description="Create a new expense category."
+    description="Create a new expense category.",
+    responses={
+        409: {"description": "Category already exists"}
+    }
 )
 def create_category(
     dto: CategoryCreateDTO,
@@ -47,7 +53,7 @@ def create_category(
 
     if existing:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Category already exists"
         )
 
@@ -64,7 +70,10 @@ def create_category(
     "/{category_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete category",
-    description="Delete category by its ID."
+    description="Delete category by its ID.",
+    responses={
+        404: {"description": "Category not found"}
+    }
 )
 def delete_category(
     category_id: int,
@@ -80,7 +89,7 @@ def delete_category(
 
     if not category:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Category not found"
         )
 
@@ -88,3 +97,4 @@ def delete_category(
     db.commit()
 
     return None
+

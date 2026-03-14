@@ -1,13 +1,17 @@
+# standard library
+from os import getenv
 from datetime import datetime, timedelta, timezone
+from typing import cast
 
+# third party
 import jwt
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from starlette import status
 
+# local
 from app.db.session import get_session
 from app.models.models import User
 
@@ -15,7 +19,7 @@ from app.models.models import User
 security = HTTPBearer()
 
 
-# konfiguracja algorytmu hashującego
+# password hashing configuration
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
@@ -30,7 +34,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-SECRET_KEY = "Change_me_to_sth_random_and_long"
+SECRET_KEY = getenv("SECRET_KEY", "test_secret_key_for_jwt_should_be_longer_than_32_chars")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -61,10 +65,10 @@ def get_current_user(
     except PyJWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id)).one_or_none()
 
     if user is None:
         raise credentials_exception
 
-    return user
+    return cast(User, user)
 

@@ -1,22 +1,23 @@
-from datetime import date, datetime, time
+# standard library
 import io
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from datetime import date, datetime, time
 
+# third party
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
+# local
 from app.core.exception import (
     CategoryNotFoundException,
     ExpenseNotFoundException,
     InvalidMonthException,
     InvalidYearException,
     NoExpensesFoundException,
-    UserAlreadyExistsException,
 )
-from app.core.security import hash_password
 from app.models.models import Category, Expense, User
-from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO, UserCreate
+from app.schemas.schemas import ExpenseCreateDTO, ExpenseUpdateDTO
 
 
 def get_all_expenses(db: Session,
@@ -32,7 +33,11 @@ def get_all_expenses(db: Session,
                      category_id: int | None,
                      category_name: str | None
                      ):
-    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+    query = (
+        db.query(Expense)
+        .options(joinedload(Expense.category))
+        .filter(Expense.user_id == current_user.id)
+    )
 
     # filter by price range
     if min_price is not None:
@@ -63,7 +68,7 @@ def get_all_expenses(db: Session,
         "created_at": Expense.created_at
     }
 
-    column = columns.get(sort_by, Expense.created_at)
+    column = columns.get(sort_by) or Expense.created_at
 
     if order == "desc":
         query = query.order_by(column.desc(), Expense.id.desc())
@@ -208,7 +213,7 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
                 .filter(
         func.strftime("%m", Expense.created_at) == f"{month:02}",
         func.strftime("%Y", Expense.created_at) == str(year),
-        Expense.user_id == current_user.id
+        Expense.user_id == int(current_user.id)
     )
                 .all()
                 )
@@ -216,22 +221,22 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
     if not expenses:
         raise NoExpensesFoundException()
 
-    # Grupowanie
+    # group expenses by category
     categories = {}
     for expense in expenses:
         name = expense.category.name
         categories[name] = categories.get(name, 0) + expense.price
 
-    # Przygotowanie danych do wykresu
+    # prepare data for chart
     labels = list(categories.keys())
     values = list(categories.values())
     total_sum = sum(values)
 
-    # Wyróżnienie największej kategorii
+    # highlight the largest category
     max_index = values.index(max(values))
     explode = [0.08 if i == max_index else 0 for i in range(len(values))]
 
-    # Kolorystyka
+    # color palette
     cmap = plt.get_cmap("tab20")
     colors = cmap(np.linspace(0, 1, len(labels)))
 
@@ -248,14 +253,14 @@ def generate_visualization(db: Session, year: int, month: int, current_user: Use
         textprops={"fontsize": 10}
     )
 
-    # Tytuł
+    # chart title
     ax.set_title(
         f"Expenses distribution\n{month:02}/{year}",
         fontsize=14,
         weight="bold"
     )
 
-    # Równe proporcje koła
+    # keep pie chart proportions equal
     ax.axis("equal")
 
     image_stream = io.BytesIO()
@@ -276,7 +281,7 @@ def generate_report(
     query = (
         db.query(Expense)
         .options(joinedload(Expense.category))
-        .filter(Expense.user_id == current_user.id)
+        .filter(Expense.user_id == int(current_user.id))
     )
 
     if category:
@@ -313,7 +318,7 @@ def generate_report(
         ws_data.append([
             exp.id,
             exp.name,
-            exp.category.name if exp.category else None,
+            getattr(exp.category, "name", None),
             exp.price,
             exp.created_at
         ])
@@ -344,13 +349,13 @@ def generate_report(
         fill_type="solid"
     )
 
-    # Okres raportu
+    # Report period
     period_text = f"Period: {start_date or '---'} - {end_date or '---'}"
     ws_summary["A2"] = period_text
     ws_summary.merge_cells("A2:B2")
     ws_summary["A2"].alignment = Alignment(horizontal="center")
 
-    # Podstawowe statystyki
+    # Basic statistics
     total = sum(exp.price for exp in expenses)
     count = len(expenses)
     average = total / count if count else 0
@@ -368,12 +373,12 @@ def generate_report(
         ws_summary[f"B{idx}"] = value
         ws_summary[f"A{idx}"].font = Font(bold=True)
 
-    # Format waluty (Total, Average, Max)
+    # Currency format (Total, Average, Max)
     for row in ws_summary.iter_rows(min_row=4, max_row=6, min_col=2, max_col=2):
         for cell in row:
             cell.number_format = "#,##0.00"
 
-    # Ramki dla summary
+    # Borders for summary table
     thin = Side(style="thin")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
@@ -381,7 +386,7 @@ def generate_report(
         for cell in row:
             cell.border = border
 
-    # Sekcja kategorii
+    # Category section
     ws_summary["A9"] = "By Category"
     ws_summary["A9"].font = Font(size=12, bold=True)
 
@@ -390,7 +395,7 @@ def generate_report(
         name = exp.category.name
         category_totals[name] = category_totals.get(name, 0) + exp.price
 
-    # Sortowanie malejąco
+    # Sort categories by total descending
     sorted_categories = sorted(
         category_totals.items(),
         key=lambda x: x[1],
@@ -404,7 +409,7 @@ def generate_report(
         ws_summary[f"B{row_start + idx}"] = value
         ws_summary[f"B{row_start + idx}"].number_format = "#,##0.00"
 
-        # Wyróżnienie największej kategorii
+        # Highlight the largest category
         if idx == 0:
             ws_summary[f"A{row_start + idx}"].font = Font(bold=True)
             ws_summary[f"B{row_start + idx}"].font = Font(bold=True)
@@ -421,26 +426,3 @@ def generate_report(
 
     return output
 
-
-def create_user(db: Session, user: UserCreate):
-    existing_user = db.query(User).filter(User.email == user.email).first()
-
-    if existing_user:
-        raise UserAlreadyExistsException()
-
-    hashed_pw = hash_password(user.password)
-
-    db_user = User(
-        email=user.email,
-        hashed_password=hashed_pw
-    )
-
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-
-    return db_user
-
-
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()

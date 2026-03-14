@@ -1,12 +1,14 @@
-from datetime import datetime, timedelta
+# standard library
 import random
+from datetime import datetime, timedelta
 
+# local
 from app.core.security import hash_password
 from app.db.session import Session
 from app.models.models import Category, Expense, User
 
 
-def get_or_create_category(db, name: str):
+def get_or_create_category(db: Session, name: str) -> Category:
     category = db.query(Category).filter(Category.name == name).first()
     if not category:
         category = Category(name=name)
@@ -14,7 +16,7 @@ def get_or_create_category(db, name: str):
     return category
 
 
-def random_date_in_month(year: int, month: int):
+def random_date_in_month(year: int, month: int) -> datetime:
     start = datetime(year, month, 1)
     if month == 12:
         end = datetime(year + 1, 1, 1)
@@ -25,12 +27,12 @@ def random_date_in_month(year: int, month: int):
     random_day = random.randrange(delta.days)
     return start + timedelta(
         days=random_day,
-        hours=random.randint(0,23),
-        minutes=random.randint(0,59)
+        hours=random.randint(0, 23),
+        minutes=random.randint(0, 59)
     )
 
 
-def seed():
+def seed() -> None:
     db = Session()
     db.query(Expense).delete()
     db.query(Category).delete()
@@ -57,7 +59,7 @@ def seed():
             # Rent
             rent = Expense(
                 name="Rent",
-                price=random.randint(1800,2400),
+                price=random.randint(1800, 2400),
                 created_at=random_date_in_month(current_year, month),
                 category=categories["Rent"],
                 user_id=user.id
@@ -65,27 +67,27 @@ def seed():
             db.add(rent)
 
             # Food
-            count = random.randint(8,12)
+            count = random.randint(8, 12)
             for _ in range(count):
                 expense = Expense(
                     name="Food",
-                    price=random.randint(20,120),
-                    created_at=random_date_in_month(current_year,month),
+                    price=random.randint(20, 120),
+                    created_at=random_date_in_month(current_year, month),
                     category=categories["Food"],
                     user_id=user.id
-                    )
+                )
                 db.add(expense)
 
             # Transport
-            count = random.randint(3,5)
+            count = random.randint(3, 5)
             for _ in range(count):
                 expense = Expense(
                     name="Transport",
-                    price=random.randint(50,200),
-                    created_at=random_date_in_month(current_year,month),
+                    price=random.randint(50, 200),
+                    created_at=random_date_in_month(current_year, month),
                     category=categories["Transport"],
                     user_id=user.id
-                    )
+                )
                 db.add(expense)
 
             # Entertainment

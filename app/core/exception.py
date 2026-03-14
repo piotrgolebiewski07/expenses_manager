@@ -1,27 +1,26 @@
 class ExpenseNotFoundException(Exception):
-    pass
+    """Raised when an expense cannot be found."""
 
 
 class NoExpensesFoundException(Exception):
-    pass
+    """Raised when no expenses exist for the given query."""
 
 
 class DatabaseException(Exception):
-    pass
+    """Raised when a database operation fails."""
 
 
 class InvalidMonthException(Exception):
-    pass
+    """Raised when the provided month is outside the range 1–12."""
 
 
 class InvalidYearException(Exception):
-    pass
+    """Raised when the provided year is outside the allowed range."""
 
 
 class CategoryNotFoundException(Exception):
-    pass
+    """Raised when the specified category does not exist."""
 
 
 class UserAlreadyExistsException(Exception):
-    pass
-
+    """Raised when trying to create a user that already exists."""

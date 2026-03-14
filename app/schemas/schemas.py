@@ -1,7 +1,9 @@
-from datetime import datetime
+# standard library
 import re
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator, ConfigDict, Field
+# third party
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class CategoryNestedDTO(BaseModel):
@@ -72,7 +74,7 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_password(cls, value: str) -> str:
         if len(value) < 8:
-            raise ValueError("Password must be at least  8 characters long")
+            raise ValueError("Password must be at least 8 characters long")
         if not re.search(r"\d", value):
             raise ValueError("Password must contain at least one digit")
         if not re.search(r"[A-Z]", value):

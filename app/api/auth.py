@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+# third party
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from starlette import status
 
+# local
 from app.core.security import create_access_token, get_current_user, verify_password
 from app.db.session import get_session
-from app.expenses.crud import create_user, get_user_by_email
 from app.models.models import User
 from app.schemas.schemas import LoginRequest, Token, UserCreate, UserDTO
+from app.users.crud import create_user, get_user_by_email
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -37,7 +38,10 @@ def register(user: UserCreate, db: Session = Depends(get_session)):
     "/login",
     response_model=Token,
     summary="Authenticate user",
-    description="Authenticate user with email and password and return a JWT access token."
+    description="Authenticate user with email and password and return a JWT access token.",
+    responses={
+        401: {"description": "Invalid credentials"}
+    }
 )
 def login(data: LoginRequest, db: Session = Depends(get_session)):
     """
@@ -49,15 +53,7 @@ def login(data: LoginRequest, db: Session = Depends(get_session)):
     """
     user = get_user_by_email(db, data.email)
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "errors": [{"message": "Invalid credentials", "field": None}]
-            }
-        )
-
-    if not verify_password(data.password, user.hashed_password):
+    if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={
@@ -79,5 +75,5 @@ def read_me(current_user: User = Depends(get_current_user)):
     """
     Return information about the authenticated user.
     """
-    return {"id": current_user.id, "email": current_user.email}
+    return current_user
 

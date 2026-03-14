@@ -1,10 +1,13 @@
+# standard library
 from datetime import date
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+# third-party
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+# local
 from app.core.security import get_current_user
 from app.db.session import get_session
 from app.expenses.crud import (
@@ -17,8 +20,14 @@ from app.expenses.crud import (
     statistics,
     update_expense,
 )
-from app.models.models import User, Category
-from app.schemas.schemas import ExpenseCreateDTO, ExpenseDTO, ExpenseUpdateDTO, PaginatedExpenseDTO
+from app.models.models import Category, User
+from app.schemas.schemas import (
+    ExpenseCreateDTO,
+    ExpenseDTO,
+    ExpenseUpdateDTO,
+    PaginatedExpenseDTO,
+)
+
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
@@ -63,33 +72,46 @@ def read_all_expenses_endpoint(
     Returns a paginated list of expenses.
     """
     if min_price is not None and max_price is not None and min_price > max_price:
-        raise HTTPException(status_code=400, detail="min_price cannot be greater than max_price")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="min_price cannot be greater than max_price"
+        )
 
     if start_date is not None and end_date is not None and start_date > end_date:
-        raise HTTPException(status_code=400, detail="start date cannot be greater than end date")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="start date cannot be greater than end date"
+        )
 
     if category_name is not None and category_id is not None:
         category = db.query(Category).filter(Category.id == category_id).first()
 
         if not category:
-            raise HTTPException(status_code=400, detail="Invalid category_id")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid category_id"
+            )
 
         if category.name.lower() != category_name.lower():
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="category_id does not match category_name"
             )
 
     return get_all_expenses(
-        db, current_user,
-        limit, offset,
-        sort_by, order,
-        min_price,
-        max_price,
-        start_date,
-        end_date,
-        category_id,
-        category_name)
+        db=db,
+        current_user=current_user,
+        limit=limit,
+        offset=offset,
+        sort_by=sort_by,
+        order=order,
+        min_price=min_price,
+        max_price=max_price,
+        start_date=start_date,
+        end_date=end_date,
+        category_id=category_id,
+        category_name=category_name,
+    )
 
 
 @router.post(
@@ -112,7 +134,7 @@ def create_expense_endpoint(
     status_code=status.HTTP_200_OK,
     summary="Update an expense"
 )
-def update_expenses_endpoint(
+def update_expense_endpoint(
         expense_id: int,
         dto: ExpenseUpdateDTO,
         db: Session = Depends(get_session),
@@ -189,7 +211,7 @@ def get_visualization_endpoint(
     PNG image containing the generated chart.
     """
     image_stream = generate_visualization(db, year, month, current_user)
-    return StreamingResponse(image_stream, media_type='image/png')
+    return StreamingResponse(image_stream, media_type="image/png")
 
 
 @router.get(
@@ -250,7 +272,7 @@ def generate_report_endpoint(
     summary="Get expense by ID",
     description="Retrieve a single expense belonging to the authenticated user."
 )
-def read_expenses_by_id_endpoint(
+def read_expense_by_id_endpoint(
         expense_id: int,
         db: Session = Depends(get_session),
         current_user: User = Depends(get_current_user)
