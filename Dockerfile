@@ -9,8 +9,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # copy application code
 COPY . .
 
-# allow start script execution
-RUN chmod +x start.sh
+# fix line endings and allow start script execution
+RUN apt-get update && apt-get install -y dos2unix \
+    && dos2unix start.sh \
+    && chmod +x start.sh
 
 EXPOSE 8000
 
