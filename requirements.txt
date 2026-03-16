@@ -13,3 +13,4 @@ python-dotenv==1.2.1
 SQLAlchemy==2.0.44
 starlette==0.41.3
 uvicorn==0.34.0
+httpx==0.28.1
