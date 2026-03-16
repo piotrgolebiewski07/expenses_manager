@@ -1,12 +1,16 @@
 # Expenses Manager API
 
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Pytest](https://img.shields.io/badge/tests-pytest-green)
+![FastAPI](https://img.shields.io/badge/FastAPI-framework-green)
+![Docker](https://img.shields.io/badge/Docker-container-blue)
 ![CI](https://github.com/piotrgolebiewski07/expenses_manager/actions/workflows/ci.yml/badge.svg)
 
 Backend API for managing personal expenses built with **FastAPI**.
 
 The application allows users to register, log in, and manage their expenses.  
 This project demonstrates a typical backend architecture with authentication,
-database migrations, seed data and Docker support.
+database migrations, pagination, filtering, automated tests (pytest) and Docker support.
 
 ---
 
@@ -40,7 +44,9 @@ SQLite Database
 - User registration and login
 - JWT authentication
 - Expense management
-- Database migrations
+- Pagination and filtering of expenses
+- Automated tests with pytest (54 tests)
+- Database migrations with Alembic
 - Seed data for testing
 - Docker support
 
@@ -86,6 +92,27 @@ The container will automatically:
 - create database tables
 - seed the database with test data
 - start the API server
+
+---
+
+## Running Locally (without Docker)
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+---
+
+## Running Tests
+
+Run the test suite with:
+
+```bash
+pytest
+```
+
+All tests should pass (currently 54 tests).
 
 ---
 
