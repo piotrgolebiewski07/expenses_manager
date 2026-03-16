@@ -1,14 +1,15 @@
 # Expenses Manager API
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![Pytest](https://img.shields.io/badge/tests-pytest-green)
-![FastAPI](https://img.shields.io/badge/FastAPI-framework-green)
-![Docker](https://img.shields.io/badge/Docker-container-blue)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-container-2496ED?logo=docker&logoColor=white)
 ![CI](https://github.com/piotrgolebiewski07/expenses_manager/actions/workflows/ci.yml/badge.svg)
 
-Backend API for managing personal expenses built with **FastAPI**.
+REST API for managing personal expenses built with FastAPI.
 
-The application allows users to register, log in, and manage their expenses.  
+Users can register, authenticate, and manage their expenses.
+
 This project demonstrates a typical backend architecture with authentication,
 database migrations, pagination, filtering, automated tests (pytest) and Docker support.
 
@@ -34,6 +35,7 @@ SQLite Database
 - FastAPI
 - SQLAlchemy
 - Alembic
+- Pytest
 - SQLite
 - Docker
 
@@ -41,14 +43,13 @@ SQLite Database
 
 ## Features
 
-- User registration and login
-- JWT authentication
-- Expense management
+- User registration and authentication (JWT)
+- Expense CRUD operations
 - Pagination and filtering of expenses
-- Automated tests with pytest (54 tests)
+- Automated API tests with pytest (54 tests)
 - Database migrations with Alembic
-- Seed data for testing
-- Docker support
+- Seed data for development and testing
+- Dockerized application
 
 ---
 
